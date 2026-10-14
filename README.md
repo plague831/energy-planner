@@ -9,7 +9,7 @@
 | Тека | Що там |
 |---|---|
 | `core/` | Модель задачі, імітація доби, генератор сценаріїв, алгоритми, тести й експерименти |
-| `server/` | API на Express (`/api/plan`, `/api/defaults`, `/api/algorithms`) |
+| `server/` | API на Express і PostgreSQL: планування, облікові записи, кабінет (див. `server/README.md`) |
 | `client/` | Сайт на React + Vite |
 | `docs/model.md` | Опис математичної моделі та методу |
 
@@ -22,6 +22,8 @@ npm install
 npm run dev:server   # API на http://localhost:3001
 npm run dev:client   # сайт на http://localhost:5173
 ```
+
+Для облікових записів потрібна PostgreSQL, як її підняти описано в `server/README.md`. Без неї працює сторінка плану без входу.
 
 Продакшн-збірка: `npm run build`, після чого `node server/src/index.js` віддає і API, і сайт.
 
