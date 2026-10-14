@@ -189,6 +189,23 @@ button:disabled {
   overflow-x: auto;
 }
 
+.list-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin-top: 8px;
+}
+
+.list-actions .link-button {
+  margin-top: 0;
+}
+
+.preset-select {
+  width: auto;
+  max-width: 100%;
+}
+
 .list-editor table {
   width: 100%;
   border-collapse: collapse;

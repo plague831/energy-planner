@@ -1,5 +1,6 @@
 // Таблиця для редагування списку однотипних записів (відключення, навантаження, прилади).
-export default function ListEditor({ columns, rows, onChange, newRow, addLabel }) {
+// presets (необов'язково): типові записи, які можна додати одним вибором зі списку.
+export default function ListEditor({ columns, rows, onChange, newRow, addLabel, presets }) {
   const update = (index, key, value) => {
     onChange(rows.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
   };
@@ -33,9 +34,28 @@ export default function ListEditor({ columns, rows, onChange, newRow, addLabel }
           ))}
         </tbody>
       </table>
-      <button type="button" className="link-button" onClick={() => onChange([...rows, newRow(rows.length)])}>
-        + {addLabel}
-      </button>
+      <div className="list-actions">
+        <button type="button" className="link-button" onClick={() => onChange([...rows, newRow(rows.length)])}>
+          + {addLabel}
+        </button>
+        {presets && (
+          <select
+            className="preset-select"
+            value=""
+            onChange={(e) => {
+              const preset = presets[Number(e.target.value)];
+              if (preset) onChange([...rows, { ...newRow(rows.length), ...preset }]);
+            }}
+          >
+            <option value="">Додати з довідника…</option>
+            {presets.map((p, i) => (
+              <option key={p.name} value={i}>
+                {p.name}, {p.powerW} Вт
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
     </div>
   );
 }

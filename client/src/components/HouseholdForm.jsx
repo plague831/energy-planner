@@ -1,4 +1,5 @@
 import ListEditor from './ListEditor.jsx';
+import { appliancePresets, baseLoadPresets, stationPresets } from '../presets.js';
 
 const outageColumns = [
   { key: 'from', label: 'З', type: 'time' },
@@ -27,7 +28,10 @@ const applianceColumns = [
 export default function HouseholdForm({ household, onChange }) {
   const set = (key, value) => onChange({ ...household, [key]: value });
   const battery = household.battery;
-  const setBattery = (key, value) => set('battery', { ...battery, [key]: value });
+  const setBattery = (key, value) => {
+    const specChanged = ['capacityWh', 'inverterMaxW', 'maxChargeW'].includes(key);
+    set('battery', { ...battery, [key]: value, ...(specChanged ? { model: undefined } : {}) });
+  };
 
   return (
     <div className="form">
@@ -51,6 +55,26 @@ export default function HouseholdForm({ household, onChange }) {
             Є зарядна станція
           </label>
         </div>
+        {battery && (
+          <label className="field">
+            <span>Модель станції</span>
+            <select
+              value={stationPresets.findIndex((p) => p.name === battery.model)}
+              onChange={(e) => {
+                const preset = stationPresets[Number(e.target.value)];
+                const { name, ...specs } = preset ?? {};
+                onChange({ ...household, battery: preset ? { ...battery, ...specs, model: name } : { ...battery, model: undefined } });
+              }}
+            >
+              <option value={-1}>Інша (ввести вручну)</option>
+              {stationPresets.map((p, i) => (
+                <option key={p.name} value={i}>
+                  {p.name} ({p.capacityWh} Вт·год)
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {battery && (
           <div className="grid-fields">
             <NumberField label="Ємність, Вт·год" value={battery.capacityWh} onChange={(v) => setBattery('capacityWh', v)} />
@@ -83,6 +107,7 @@ export default function HouseholdForm({ household, onChange }) {
           onChange={(rows) => set('baseLoads', rows)}
           newRow={(i) => ({ id: `base-${Date.now()}-${i}`, name: '', powerW: 50, priority: 3 })}
           addLabel="Додати навантаження"
+          presets={baseLoadPresets}
         />
       </section>
 
@@ -104,6 +129,7 @@ export default function HouseholdForm({ household, onChange }) {
             allowOnBattery: true,
           })}
           addLabel="Додати прилад"
+          presets={appliancePresets}
         />
       </section>
     </div>
