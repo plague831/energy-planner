@@ -1,0 +1,22 @@
+{
+  "name": "energy-planner",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Метод і веб-сервіс планування енергоспоживання домогосподарства в умовах невизначеності графіків відключень електроенергії",
+  "type": "module",
+  "workspaces": [
+    "core",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "experiment": "npm run experiment --workspace core",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace client"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}
