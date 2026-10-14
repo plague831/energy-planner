@@ -1,6 +1,6 @@
 // Таблиця для редагування списку однотипних записів (відключення, навантаження, прилади).
 // presets (необов'язково): типові записи, які можна додати одним вибором зі списку.
-export default function ListEditor({ columns, rows, onChange, newRow, addLabel, presets }) {
+export default function ListEditor({ columns, rows, onChange, newRow, addLabel, presets, emptyText = 'Список порожній.' }) {
   const update = (index, key, value) => {
     onChange(rows.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
   };
@@ -8,7 +8,8 @@ export default function ListEditor({ columns, rows, onChange, newRow, addLabel, 
 
   return (
     <div className="list-editor">
-      <table>
+      {rows.length === 0 && <p className="list-empty">{emptyText}</p>}
+      <table hidden={rows.length === 0}>
         <thead>
           <tr>
             {columns.map((c) => (

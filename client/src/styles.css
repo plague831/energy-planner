@@ -15,6 +15,7 @@
   --good: #15803d;
   --warn: #b45309;
   --bad: #b91c1c;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235d6878' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   color-scheme: light;
 }
 
@@ -36,6 +37,7 @@
     --good: #4ade80;
     --warn: #fbbf24;
     --bad: #f87171;
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239aa5b5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
 }
@@ -145,6 +147,34 @@ select {
   min-width: 0;
 }
 
+input:not([type='checkbox']),
+select {
+  height: 36px;
+}
+
+/* Власна стрілка замість системної: системна на macOS налазить на рамку і різна в різних браузерах. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 30px;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px 8px;
+  cursor: pointer;
+}
+
+select:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
 input[type='checkbox'] {
   width: 18px;
   height: 18px;
@@ -220,6 +250,13 @@ button:disabled {
   }
 }
 
+.import-row button {
+  height: 36px;
+  padding-top: 0;
+  padding-bottom: 0;
+  white-space: nowrap;
+}
+
 .import-message {
   margin: 10px 0 0;
   font-size: 13px;
@@ -250,6 +287,16 @@ button:disabled {
 
 .list-editor input[type='number'] {
   width: 90px;
+}
+
+.list-editor select {
+  min-width: 64px;
+}
+
+.list-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .list-editor input[type='text'] {

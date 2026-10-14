@@ -97,6 +97,7 @@ export default function HouseholdForm({ household, onChange }) {
           onChange={(rows) => set('outages', rows)}
           newRow={() => ({ from: '12:00', to: '16:00' })}
           addLabel="Додати відключення"
+          emptyText="Відключень немає."
         />
       </section>
 
