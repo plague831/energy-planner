@@ -14,3 +14,7 @@ export const buildPlan = (household, algorithm) =>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ household, algorithm }),
   });
+
+export const getYasnoRegions = () => request('/api/sources/yasno/regions');
+export const getYasnoSchedule = (region, dso) =>
+  request(`/api/sources/yasno/schedule?region=${encodeURIComponent(region)}&dso=${encodeURIComponent(dso)}`);

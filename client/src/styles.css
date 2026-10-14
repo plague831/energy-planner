@@ -201,6 +201,30 @@ button:disabled {
   margin-top: 0;
 }
 
+.outage-import {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.import-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 2fr) minmax(80px, 1fr) minmax(110px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 560px) {
+  .import-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.import-message {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
 .preset-select {
   width: auto;
   max-width: 100%;

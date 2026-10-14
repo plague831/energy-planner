@@ -1,4 +1,5 @@
 import ListEditor from './ListEditor.jsx';
+import OutageImport from './OutageImport.jsx';
 import { appliancePresets, baseLoadPresets, stationPresets } from '../presets.js';
 
 const outageColumns = [
@@ -89,6 +90,7 @@ export default function HouseholdForm({ household, onChange }) {
 
       <section className="card">
         <h2>Графік відключень</h2>
+        <OutageImport onApply={(outages) => set('outages', outages)} />
         <ListEditor
           columns={outageColumns}
           rows={household.outages}
