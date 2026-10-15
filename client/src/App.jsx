@@ -4,6 +4,7 @@ import HouseholdForm from './components/HouseholdForm.jsx';
 import Timeline from './components/Timeline.jsx';
 import Metrics from './components/Metrics.jsx';
 import Comparison from './components/Comparison.jsx';
+import Autonomy from './components/Autonomy.jsx';
 import { useToast } from './components/Toasts.jsx';
 
 export default function App() {
@@ -104,6 +105,8 @@ export default function App() {
               <Comparison rows={comparison} />
             </section>
           )}
+
+          <Autonomy household={household} onChange={setHousehold} />
         </div>
       </div>
     </main>

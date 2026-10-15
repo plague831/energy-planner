@@ -544,3 +544,139 @@ button:disabled {
     animation: none;
   }
 }
+
+.muted {
+  color: var(--muted);
+}
+
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.autonomy-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.autonomy .checkbox {
+  margin: 10px 0 8px;
+}
+
+.source-line {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.grid-fields.compact {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  margin-bottom: 4px;
+}
+
+.consumer-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.consumer-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.consumer-list .checkbox {
+  flex: 1;
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.consumer-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.total-line {
+  margin: 10px 0 0;
+}
+
+.source-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.source-result {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--good);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.source-result.warn {
+  border-left-color: var(--warn);
+}
+
+.source-result.bad {
+  border-left-color: var(--bad);
+}
+
+.source-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.source-name {
+  font-weight: 600;
+}
+
+.source-hours {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.load-bar {
+  height: 6px;
+  margin: 8px 0;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.load-bar div {
+  height: 100%;
+  background: var(--good);
+}
+
+.source-result.warn .load-bar div {
+  background: var(--warn);
+}
+
+.source-result.bad .load-bar div {
+  background: var(--bad);
+}
+
+.source-load {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.source-verdict {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+.hint.field-note {
+  margin: 4px 0 0;
+}
