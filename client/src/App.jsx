@@ -4,6 +4,7 @@ import HouseholdForm from './components/HouseholdForm.jsx';
 import Timeline from './components/Timeline.jsx';
 import Metrics from './components/Metrics.jsx';
 import Comparison from './components/Comparison.jsx';
+import { useToast } from './components/Toasts.jsx';
 
 export default function App() {
   const [household, setHousehold] = useState(null);
@@ -13,6 +14,7 @@ export default function App() {
   const [comparison, setComparison] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const notify = useToast();
 
   useEffect(() => {
     Promise.all([getDefaults(), getAlgorithms()])
@@ -30,18 +32,25 @@ export default function App() {
       await task();
     } catch (e) {
       setError(e.message);
+      notify('error', e.message);
     } finally {
       setBusy(false);
     }
   };
 
-  const makePlan = () => run(async () => setResult(await buildPlan(household, algorithm)));
+  const makePlan = () =>
+    run(async () => {
+      const plan = await buildPlan(household, algorithm);
+      setResult(plan);
+      notify('success', `План складено: ${plan.algorithmName}`);
+    });
 
   const compareAll = () =>
     run(async () => {
       const rows = [];
       for (const a of algorithms) rows.push(await buildPlan(household, a.id));
       setComparison(rows);
+      notify('success', `Порівняно методів: ${rows.length}`);
     });
 
   if (!household) {

@@ -1,9 +1,12 @@
+import { useToast } from './Toasts.jsx';
+
 // Таблиця для редагування списку однотипних записів (відключення, навантаження, прилади).
 // presets (необов'язково): типові записи, які можна додати одним вибором зі списку.
 export default function ListEditor({ columns, rows, onChange, newRow, addLabel, presets, emptyText = 'Список порожній.' }) {
   const update = (index, key, value) => {
     onChange(rows.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
   };
+  const notify = useToast();
   const remove = (index) => onChange(rows.filter((_, i) => i !== index));
 
   return (
@@ -45,7 +48,9 @@ export default function ListEditor({ columns, rows, onChange, newRow, addLabel, 
             value=""
             onChange={(e) => {
               const preset = presets[Number(e.target.value)];
-              if (preset) onChange([...rows, { ...newRow(rows.length), ...preset }]);
+              if (!preset) return;
+              onChange([...rows, { ...newRow(rows.length), ...preset }]);
+              notify('success', `Додано з довідника: ${preset.name}`);
             }}
           >
             <option value="">Додати з довідника…</option>

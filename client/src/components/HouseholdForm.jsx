@@ -1,5 +1,6 @@
 import ListEditor from './ListEditor.jsx';
 import OutageImport from './OutageImport.jsx';
+import { useToast } from './Toasts.jsx';
 import { appliancePresets, baseLoadPresets, stationPresets } from '../presets.js';
 
 const outageColumns = [
@@ -27,6 +28,7 @@ const applianceColumns = [
 ];
 
 export default function HouseholdForm({ household, onChange }) {
+  const notify = useToast();
   const set = (key, value) => onChange({ ...household, [key]: value });
   const battery = household.battery;
   const setBattery = (key, value) => {
@@ -65,6 +67,7 @@ export default function HouseholdForm({ household, onChange }) {
                 const preset = stationPresets[Number(e.target.value)];
                 const { name, ...specs } = preset ?? {};
                 onChange({ ...household, battery: preset ? { ...battery, ...specs, model: name } : { ...battery, model: undefined } });
+                if (preset) notify('success', `Підставлено параметри станції ${name}`);
               }}
             >
               <option value={-1}>Інша (ввести вручну)</option>
