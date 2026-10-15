@@ -1,4 +1,7 @@
 import ListEditor from './ListEditor.jsx';
+import OutageImport from './OutageImport.jsx';
+import { useToast } from './Toasts.jsx';
+import { appliancePresets, baseLoadPresets, stationPresets } from '../presets.js';
 
 const outageColumns = [
   { key: 'from', label: 'З', type: 'time' },
@@ -25,9 +28,13 @@ const applianceColumns = [
 ];
 
 export default function HouseholdForm({ household, onChange }) {
+  const notify = useToast();
   const set = (key, value) => onChange({ ...household, [key]: value });
   const battery = household.battery;
-  const setBattery = (key, value) => set('battery', { ...battery, [key]: value });
+  const setBattery = (key, value) => {
+    const specChanged = ['capacityWh', 'inverterMaxW', 'maxChargeW'].includes(key);
+    set('battery', { ...battery, [key]: value, ...(specChanged ? { model: undefined } : {}) });
+  };
 
   return (
     <div className="form">
@@ -52,6 +59,27 @@ export default function HouseholdForm({ household, onChange }) {
           </label>
         </div>
         {battery && (
+          <label className="field">
+            <span>Модель станції</span>
+            <select
+              value={stationPresets.findIndex((p) => p.name === battery.model)}
+              onChange={(e) => {
+                const preset = stationPresets[Number(e.target.value)];
+                const { name, ...specs } = preset ?? {};
+                onChange({ ...household, battery: preset ? { ...battery, ...specs, model: name } : { ...battery, model: undefined } });
+                if (preset) notify('success', `Підставлено параметри станції ${name}`);
+              }}
+            >
+              <option value={-1}>Інша (ввести вручну)</option>
+              {stationPresets.map((p, i) => (
+                <option key={p.name} value={i}>
+                  {p.name} ({p.capacityWh} Вт·год)
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {battery && (
           <div className="grid-fields">
             <NumberField label="Ємність, Вт·год" value={battery.capacityWh} onChange={(v) => setBattery('capacityWh', v)} />
             <NumberField label="Заряд зараз, %" value={battery.initialSocPct} onChange={(v) => setBattery('initialSocPct', v)} />
@@ -65,12 +93,14 @@ export default function HouseholdForm({ household, onChange }) {
 
       <section className="card">
         <h2>Графік відключень</h2>
+        <OutageImport onApply={(outages) => set('outages', outages)} />
         <ListEditor
           columns={outageColumns}
           rows={household.outages}
           onChange={(rows) => set('outages', rows)}
           newRow={() => ({ from: '12:00', to: '16:00' })}
           addLabel="Додати відключення"
+          emptyText="Відключень немає."
         />
       </section>
 
@@ -83,6 +113,7 @@ export default function HouseholdForm({ household, onChange }) {
           onChange={(rows) => set('baseLoads', rows)}
           newRow={(i) => ({ id: `base-${Date.now()}-${i}`, name: '', powerW: 50, priority: 3 })}
           addLabel="Додати навантаження"
+          presets={baseLoadPresets}
         />
       </section>
 
@@ -104,6 +135,7 @@ export default function HouseholdForm({ household, onChange }) {
             allowOnBattery: true,
           })}
           addLabel="Додати прилад"
+          presets={appliancePresets}
         />
       </section>
     </div>

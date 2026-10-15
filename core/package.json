@@ -6,7 +6,8 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./examples": "./examples/demo-household.js"
+    "./examples": "./examples/demo-household.js",
+    "./autonomy": "./src/autonomy.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js",
