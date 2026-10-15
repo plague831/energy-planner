@@ -6,6 +6,7 @@ import Metrics from './components/Metrics.jsx';
 import Comparison from './components/Comparison.jsx';
 import Autonomy from './components/Autonomy.jsx';
 import ActionList from './components/ActionList.jsx';
+import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
 import { useToast } from './components/Toasts.jsx';
 
 const STORAGE_KEY = 'energy-planner:household';
@@ -56,7 +57,7 @@ export default function App() {
   const onOutagesLoaded = (outages, meta) => {
     setPlanDay(meta);
     if (outages === null) return;
-    setHousehold((h) => ({ ...h, outages }));
+    setHousehold((h) => ({ ...h, outages, possibleOutages: meta.possible ?? [] }));
     setResult(null);
     if (meta.auto) setPendingPlan(true);
   };
@@ -67,6 +68,12 @@ export default function App() {
     setPendingPlan(false);
     makePlan();
   }, [pendingPlan]);
+
+  const exportCalendar = () => {
+    const date = planDay?.date?.slice(0, 10) ?? localDate(planDay?.day === 'tomorrow' ? 1 : 0);
+    downloadIcs(planToIcs(result, household, date), `plan-${date}.ics`);
+    notify('success', 'Файл календаря збережено: відкрийте його, щоб додати нагадування');
+  };
 
   const resetToDemo = () => {
     setHousehold(defaults);
@@ -115,10 +122,12 @@ export default function App() {
       </header>
 
       <div className="layout">
-        <HouseholdForm household={household} onChange={setHousehold} onOutagesLoaded={onOutagesLoaded} />
+        <div className="no-print">
+          <HouseholdForm household={household} onChange={setHousehold} onOutagesLoaded={onOutagesLoaded} />
+        </div>
 
         <div className="results">
-          <section className="card controls">
+          <section className="card controls no-print">
             <label className="field">
               <span>Метод планування</span>
               <select value={algorithm} onChange={(e) => setAlgorithm(e.target.value)}>
@@ -150,6 +159,14 @@ export default function App() {
                 {planDay?.date ? ` (${planDay.date.slice(8, 10)}.${planDay.date.slice(5, 7)})` : ''}
               </h2>
               <p className="hint">{result.algorithmName}</p>
+              <div className="plan-actions no-print">
+                <button type="button" className="secondary" onClick={() => window.print()}>
+                  Друкувати план
+                </button>
+                <button type="button" className="secondary" onClick={exportCalendar}>
+                  Нагадування в календар
+                </button>
+              </div>
               <ActionList result={result} household={household} isToday={planDay?.day !== 'tomorrow'} />
               <h3 className="timeline-title">Діаграма доби</h3>
               <Timeline result={result} household={household} />
@@ -158,13 +175,15 @@ export default function App() {
           )}
 
           {comparison && (
-            <section className="card">
+            <section className="card no-print">
               <h2>Порівняння методів</h2>
               <Comparison rows={comparison} />
             </section>
           )}
 
-          <Autonomy household={household} onChange={setHousehold} />
+          <div className="no-print">
+            <Autonomy household={household} onChange={setHousehold} />
+          </div>
         </div>
       </div>
     </main>

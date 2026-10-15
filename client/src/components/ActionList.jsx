@@ -87,6 +87,11 @@ function buildEvents(result, household) {
     }
   }
 
+  for (const o of household.possibleOutages ?? []) {
+    const slot = Math.round((Number(o.from.slice(0, 2)) * 60 + Number(o.from.slice(3))) / SLOT_MIN);
+    events.push({ slot, time: o.from, kind: 'possible', title: `Можливе відключення до ${o.to}`, detail: 'YASNO попереджає про можливе відключення; краще не планувати на цей час важливе.' });
+  }
+
   const outageSlots = new Set(trace.filter((t) => !t.gridOn).map((t) => t.slot));
   for (const s of result.schedule) {
     if (s.skipped) continue;
@@ -96,7 +101,7 @@ function buildEvents(result, household) {
     events.push({ slot: s.startSlot, time: s.start, kind: failed.has(s.id) ? 'appliance warn' : 'appliance', title: `Увімкніть: ${s.name}`, detail: notes.join(' ') });
   }
 
-  const order = { grid: 0, outage: 1, charge: 2, appliance: 3 };
+  const order = { grid: 0, outage: 1, possible: 2, charge: 3, appliance: 4 };
   return events.sort((a, b) => a.slot - b.slot || order[a.kind.split(' ')[0]] - order[b.kind.split(' ')[0]]);
 }
 

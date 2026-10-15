@@ -18,10 +18,18 @@ export default function Timeline({ result, household }) {
 
   const outageRuns = runs(trace.map((t) => !t.gridOn));
   const capacity = household.battery?.capacityWh;
+  // Можливі відключення з YASNO: показуються штриховкою, але в розрахунку плану не враховуються.
+  const possible = (household.possibleOutages ?? []).map((o) => [toSlot(o.from), toSlot(o.to)]);
 
   return (
     <div className="timeline">
       <svg viewBox={`0 0 ${WIDTH} ${height}`} role="img" aria-label="Часова діаграма плану на добу">
+        <defs>
+          <pattern id="possible-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="8" height="8" className="grid-possible-bg" />
+            <line x1="0" y1="0" x2="0" y2="8" className="grid-possible-line" />
+          </pattern>
+        </defs>
         {Array.from({ length: 25 }, (_, h) => (
           <g key={h}>
             <line className="tick" x1={x(h * 4)} x2={x(h * 4)} y1={top - 4} y2={height - 20} />
@@ -39,6 +47,10 @@ export default function Timeline({ result, household }) {
         <rect className="grid-on" x={x(0)} y={gridRowY + 4} width={SLOTS * SLOT_W} height={ROW_H - 8} rx={4} />
         {outageRuns.map(([from, to]) => (
           <rect key={from} className="grid-off" x={x(from)} y={gridRowY + 4} width={(to - from) * SLOT_W} height={ROW_H - 8} rx={4} />
+        ))}
+
+        {possible.map(([from, to]) => (
+          <rect key={`p${from}`} className="grid-possible" x={x(from)} y={gridRowY + 4} width={(to - from) * SLOT_W} height={ROW_H - 8} rx={4} />
         ))}
 
         {rows.map((r, i) => {
@@ -97,6 +109,11 @@ export default function Timeline({ result, household }) {
       </svg>
     </div>
   );
+}
+
+function toSlot(time) {
+  const [h, m] = time.split(':').map(Number);
+  return Math.round((h * 60 + m) / 15);
 }
 
 function x(slot) {

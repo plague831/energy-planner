@@ -59,7 +59,7 @@ export default function HouseholdForm({ household, onChange, onOutagesLoaded }) 
           </label>
         </div>
         {battery && (
-          <label className="field">
+          <label className="field station-model">
             <span>Модель станції</span>
             <select
               value={stationPresets.findIndex((p) => p.name === battery.model)}

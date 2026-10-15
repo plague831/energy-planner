@@ -79,7 +79,7 @@ export default function OutageImport({ onApply }) {
       }
       const when = `${choice.day === 'today' ? 'на сьогодні' : 'на завтра'}${day.date ? ` (${formatDate(day.date)})` : ''}`;
       if (day.status === 'ScheduleApplies' || day.status === 'NoOutages') {
-        onApply(day.outages, { auto, day: choice.day, date: day.date });
+        onApply(day.outages, { auto, day: choice.day, date: day.date, possible: day.possible });
         const parts = [`Черга ${choice.group} ${when}: ${countOutages(day.outages.length)}.`];
         if (day.possible.length) parts.push(`Можливі додаткові відключення: ${day.possible.map((o) => `${o.from}–${o.to}`).join(', ')}.`);
         setMessage({ text: parts.join(' ') });

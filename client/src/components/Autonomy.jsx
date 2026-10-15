@@ -69,10 +69,10 @@ export default function Autonomy({ household, onChange }) {
             {b ? (
               <>
                 <strong>{b.model ?? 'Зарядна станція'}</strong>: {fmt(b.capacityWh)} Вт·год, заряд {b.initialSocPct ?? 100}%, інвертор до {fmt(b.inverterMaxW)} Вт
-                <span className="muted"> (з форми ліворуч)</span>
+                <span className="muted"> (із форми)</span>
               </>
             ) : (
-              <span className="muted">Зарядної станції немає, її можна додати у формі ліворуч.</span>
+              <span className="muted">Зарядної станції немає, її можна додати у формі «Мережа і зарядна станція».</span>
             )}
           </p>
 
