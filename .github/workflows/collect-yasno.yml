@@ -1,0 +1,50 @@
+name: Збір графіків YASNO
+
+# Кожні 30 хвилин зберігає графіки відключень YASNO, якщо вони змінилися.
+# Знімки комітяться в окрему гілку yasno-data, щоб не засмічувати main.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect-yasno
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Отримати гілку з даними
+        run: |
+          if git ls-remote --exit-code --heads origin yasno-data > /dev/null; then
+            git clone --depth 1 --branch yasno-data "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
+          else
+            mkdir data && cd data && git init -b yasno-data
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Зібрати графіки
+        run: node research/yasno/collect.js data/snapshots
+
+      - name: Зберегти зміни
+        working-directory: data
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Графіки не змінилися"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Знімки графіків YASNO $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push origin yasno-data
