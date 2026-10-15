@@ -9,3 +9,5 @@ export { greedyPlan } from './algorithms/greedy.js';
 export { geneticPlan, DEFAULT_GA } from './algorithms/genetic.js';
 export { plan, solve, describeSchedule, ALGORITHMS } from './planner.js';
 export { batterySource, generatorSource, solarSource, estimateAutonomy } from './autonomy.js';
+export { exhaustivePlan } from './algorithms/exhaustive.js';
+export { mean, sd, ci95, normalCdf, wilcoxonSignedRank } from './stats.js';
