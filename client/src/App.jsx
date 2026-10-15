@@ -5,7 +5,20 @@ import Timeline from './components/Timeline.jsx';
 import Metrics from './components/Metrics.jsx';
 import Comparison from './components/Comparison.jsx';
 import Autonomy from './components/Autonomy.jsx';
+import ActionList from './components/ActionList.jsx';
 import { useToast } from './components/Toasts.jsx';
+
+const STORAGE_KEY = 'energy-planner:household';
+
+// Дані домогосподарства зберігаються в браузері, щоб не вводити їх щоразу.
+function readSaved() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    return saved && Array.isArray(saved.appliances) && Array.isArray(saved.baseLoads) ? saved : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function App() {
   const [household, setHousehold] = useState(null);
@@ -15,16 +28,52 @@ export default function App() {
   const [comparison, setComparison] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [defaults, setDefaults] = useState(null);
+  // Для якого дня складено графік (сьогодні / завтра), щоб показувати позначку «зараз» лише для сьогодні.
+  const [planDay, setPlanDay] = useState(null);
+  const [pendingPlan, setPendingPlan] = useState(false);
   const notify = useToast();
 
   useEffect(() => {
     Promise.all([getDefaults(), getAlgorithms()])
-      .then(([defaults, list]) => {
-        setHousehold(defaults.household);
+      .then(([d, list]) => {
+        setDefaults(d.household);
+        setHousehold(readSaved() ?? d.household);
         setAlgorithms(list);
       })
       .catch((e) => setError(e.message));
   }, []);
+
+  useEffect(() => {
+    if (!household) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(household));
+    } catch {
+      // Без сховища сайт працює, просто не пам'ятає дані.
+    }
+  }, [household]);
+
+  const onOutagesLoaded = (outages, meta) => {
+    setPlanDay(meta);
+    if (outages === null) return;
+    setHousehold((h) => ({ ...h, outages }));
+    setResult(null);
+    if (meta.auto) setPendingPlan(true);
+  };
+
+  // Після автоматичного завантаження графіка план складається сам.
+  useEffect(() => {
+    if (!pendingPlan) return;
+    setPendingPlan(false);
+    makePlan();
+  }, [pendingPlan]);
+
+  const resetToDemo = () => {
+    setHousehold(defaults);
+    setResult(null);
+    setComparison(null);
+    notify('info', 'Дані замінено демонстраційним прикладом');
+  };
 
   const run = async (task) => {
     setBusy(true);
@@ -66,7 +115,7 @@ export default function App() {
       </header>
 
       <div className="layout">
-        <HouseholdForm household={household} onChange={setHousehold} />
+        <HouseholdForm household={household} onChange={setHousehold} onOutagesLoaded={onOutagesLoaded} />
 
         <div className="results">
           <section className="card controls">
@@ -87,13 +136,22 @@ export default function App() {
               <button type="button" className="secondary" onClick={compareAll} disabled={busy}>
                 Порівняти всі методи
               </button>
+              <button type="button" className="secondary" onClick={resetToDemo} disabled={busy || !defaults}>
+                Скинути до прикладу
+              </button>
             </div>
             {error && <p className="error">{error}</p>}
           </section>
 
           {result && (
             <section className="card">
-              <h2>План на добу: {result.algorithmName}</h2>
+              <h2>
+                План на {planDay?.day === 'tomorrow' ? 'завтра' : 'сьогодні'}
+                {planDay?.date ? ` (${planDay.date.slice(8, 10)}.${planDay.date.slice(5, 7)})` : ''}
+              </h2>
+              <p className="hint">{result.algorithmName}</p>
+              <ActionList result={result} household={household} isToday={planDay?.day !== 'tomorrow'} />
+              <h3 className="timeline-title">Діаграма доби</h3>
               <Timeline result={result} household={household} />
               <Metrics result={result} />
             </section>

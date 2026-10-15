@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getYasnoRegions, getYasnoSchedule } from '../api.js';
 import { useToast } from './Toasts.jsx';
 
@@ -14,6 +14,7 @@ export default function OutageImport({ onApply }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
   const notify = useToast();
+  const autoLoaded = useRef(false);
 
   useEffect(() => {
     getYasnoRegions()
@@ -57,7 +58,14 @@ export default function OutageImport({ onApply }) {
     });
   };
 
-  const load = async () => {
+  // Автоматичний режим: щойно відомі черги міста, один раз підтягуємо свіжий графік.
+  useEffect(() => {
+    if (!choice.auto || autoLoaded.current || !groups?.includes(choice.group)) return;
+    autoLoaded.current = true;
+    load({ auto: true });
+  }, [groups]);
+
+  const load = async ({ auto = false } = {}) => {
     const [region, dso] = choice.source.split(':');
     setBusy(true);
     setMessage(null);
@@ -71,7 +79,7 @@ export default function OutageImport({ onApply }) {
       }
       const when = `${choice.day === 'today' ? 'на сьогодні' : 'на завтра'}${day.date ? ` (${formatDate(day.date)})` : ''}`;
       if (day.status === 'ScheduleApplies' || day.status === 'NoOutages') {
-        onApply(day.outages);
+        onApply(day.outages, { auto, day: choice.day, date: day.date });
         const parts = [`Черга ${choice.group} ${when}: ${countOutages(day.outages.length)}.`];
         if (day.possible.length) parts.push(`Можливі додаткові відключення: ${day.possible.map((o) => `${o.from}–${o.to}`).join(', ')}.`);
         setMessage({ text: parts.join(' ') });
@@ -79,6 +87,7 @@ export default function OutageImport({ onApply }) {
       } else {
         setMessage({ text: `Черга ${choice.group} ${when}: ${lowerFirst(day.statusText)}. Таблиця лишилась без змін.` });
         notify('info', `${day.statusText}. Графік не змінено`);
+        if (auto) onApply(null, { auto, day: choice.day, date: day.date });
       }
     } catch (e) {
       setMessage({ error: true, text: e.message });
@@ -119,10 +128,14 @@ export default function OutageImport({ onApply }) {
             <option value="tomorrow">Завтра</option>
           </select>
         </label>
-        <button type="button" className="secondary" onClick={load} disabled={busy || !choice.source || !groups?.length}>
+        <button type="button" className="secondary" onClick={() => load()} disabled={busy || !choice.source || !groups?.length}>
           {busy ? 'Завантажую…' : 'Завантажити з YASNO'}
         </button>
       </div>
+      <label className="checkbox auto-toggle">
+        <input type="checkbox" checked={Boolean(choice.auto)} onChange={(e) => update('auto', e.target.checked)} />
+        Автоматично завантажувати графік і складати план при відкритті сайту
+      </label>
       {message && <p className={message.error ? 'error' : 'import-message'}>{message.text}</p>}
     </div>
   );

@@ -680,3 +680,104 @@ button:disabled {
 .hint.field-note {
   margin: 4px 0 0;
 }
+
+.auto-toggle {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.timeline-title {
+  margin: 18px 0 8px;
+}
+
+.action-list ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.action {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px 14px 1fr;
+  gap: 0 10px;
+  align-items: start;
+  padding: 6px 0;
+}
+
+.action-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding-top: 1px;
+}
+
+.action-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.action.outage .action-dot {
+  background: var(--grid-off);
+}
+
+.action.grid .action-dot {
+  background: var(--good);
+}
+
+.action.charge .action-dot {
+  background: var(--soc);
+  border-radius: 2px;
+}
+
+.action.warn .action-dot {
+  background: var(--warn);
+}
+
+.action-title {
+  font-weight: 500;
+}
+
+.action-detail {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.action.warn .action-detail {
+  color: var(--warn);
+}
+
+.action.past {
+  opacity: 0.45;
+}
+
+.now-marker {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 8px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.now-marker::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+.action.done {
+  display: block;
+}
+
+.action-skipped {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}

@@ -27,7 +27,7 @@ const applianceColumns = [
   { key: 'allowOnBattery', label: 'Від станції', type: 'checkbox' },
 ];
 
-export default function HouseholdForm({ household, onChange }) {
+export default function HouseholdForm({ household, onChange, onOutagesLoaded }) {
   const notify = useToast();
   const set = (key, value) => onChange({ ...household, [key]: value });
   const battery = household.battery;
@@ -93,7 +93,7 @@ export default function HouseholdForm({ household, onChange }) {
 
       <section className="card">
         <h2>Графік відключень</h2>
-        <OutageImport onApply={(outages) => set('outages', outages)} />
+        <OutageImport onApply={onOutagesLoaded} />
         <ListEditor
           columns={outageColumns}
           rows={household.outages}
