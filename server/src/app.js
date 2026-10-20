@@ -1,4 +1,5 @@
 import express from 'express';
+import { sourcesRouter } from './routes/sources.js';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +26,8 @@ export function createApp({ db = null } = {}) {
   app.get('/api/defaults', (req, res) => {
     res.json({ household: demoHousehold, weights: DEFAULT_WEIGHTS, uncertainty: DEFAULT_UNCERTAINTY });
   });
+
+  app.use('/api/sources', sourcesRouter());
 
   app.post('/api/plan', (req, res) => {
     const { household, algorithm = 'robust-ga', uncertainty, weights } = req.body ?? {};

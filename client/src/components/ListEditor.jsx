@@ -1,13 +1,18 @@
+import { useToast } from './Toasts.jsx';
+
 // Таблиця для редагування списку однотипних записів (відключення, навантаження, прилади).
-export default function ListEditor({ columns, rows, onChange, newRow, addLabel }) {
+// presets (необов'язково): типові записи, які можна додати одним вибором зі списку.
+export default function ListEditor({ columns, rows, onChange, newRow, addLabel, presets, emptyText = 'Список порожній.' }) {
   const update = (index, key, value) => {
     onChange(rows.map((row, i) => (i === index ? { ...row, [key]: value } : row)));
   };
+  const notify = useToast();
   const remove = (index) => onChange(rows.filter((_, i) => i !== index));
 
   return (
     <div className="list-editor">
-      <table>
+      {rows.length === 0 && <p className="list-empty">{emptyText}</p>}
+      <table hidden={rows.length === 0}>
         <thead>
           <tr>
             {columns.map((c) => (
@@ -33,9 +38,30 @@ export default function ListEditor({ columns, rows, onChange, newRow, addLabel }
           ))}
         </tbody>
       </table>
-      <button type="button" className="link-button" onClick={() => onChange([...rows, newRow(rows.length)])}>
-        + {addLabel}
-      </button>
+      <div className="list-actions">
+        <button type="button" className="link-button" onClick={() => onChange([...rows, newRow(rows.length)])}>
+          + {addLabel}
+        </button>
+        {presets && (
+          <select
+            className="preset-select"
+            value=""
+            onChange={(e) => {
+              const preset = presets[Number(e.target.value)];
+              if (!preset) return;
+              onChange([...rows, { ...newRow(rows.length), ...preset }]);
+              notify('success', `Додано з довідника: ${preset.name}`);
+            }}
+          >
+            <option value="">Додати з довідника…</option>
+            {presets.map((p, i) => (
+              <option key={p.name} value={i}>
+                {p.name}, {p.powerW} Вт
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
     </div>
   );
 }
