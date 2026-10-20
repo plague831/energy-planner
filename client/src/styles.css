@@ -71,25 +71,6 @@ body {
   color: var(--muted);
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  gap: 20px;
-  align-items: start;
-}
-
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.form,
-.results {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
 .card {
   background: var(--surface);
@@ -800,12 +781,6 @@ button:disabled {
   border: 2px dashed var(--warn);
 }
 
-/* На телефоні й планшеті спершу показуємо план і кнопки, а форму з даними — під ними. */
-@media (max-width: 1100px) {
-  .results {
-    order: -1;
-  }
-}
 
 .station-model {
   margin-bottom: 12px;
@@ -903,10 +878,6 @@ button:disabled {
     display: none !important;
   }
 
-  .layout {
-    display: block;
-  }
-
   .card {
     border: none;
     box-shadow: none;
@@ -927,5 +898,472 @@ button:disabled {
 
   .timeline svg {
     min-width: 0;
+  }
+}
+
+/* ---------- Розділи сайту ---------- */
+
+.page.narrow {
+  max-width: 920px;
+}
+
+.page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-title {
+  margin: 4px 0 16px;
+  font-size: 24px;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header-inner {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-top {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.nav-top a,
+.nav-bottom a {
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.nav-top a {
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.nav-top a:hover {
+  color: var(--text);
+}
+
+.nav-top a.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 600;
+}
+
+.nav-bottom {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .nav-top {
+    display: none;
+  }
+
+  .nav-bottom {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+
+  .nav-bottom a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 2px;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .nav-bottom a span {
+    font-size: 20px;
+  }
+
+  .nav-bottom a.active {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .page {
+    padding-bottom: 96px;
+  }
+
+  .page-title {
+    font-size: 21px;
+  }
+}
+
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 14px;
+  vertical-align: 2px;
+}
+
+details.more {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+details.more > summary,
+details.faq > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+details.more[open] > summary {
+  margin-bottom: 10px;
+}
+
+.station-simple {
+  margin-top: 12px;
+}
+
+.notice {
+  border-left: 4px solid var(--accent);
+}
+
+.notice.warn {
+  border-left-color: var(--warn);
+}
+
+.notice a {
+  color: var(--accent);
+}
+
+/* ---------- Сьогодні ---------- */
+
+.day-switch {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.day-switch button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 6px 18px;
+}
+
+.day-switch button.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.status {
+  border-left: 6px solid var(--good);
+}
+
+.status.off {
+  border-left-color: var(--grid-off);
+}
+
+.status-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.status-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.status-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.status-sub {
+  color: var(--muted);
+}
+
+.status-battery {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.battery-bar {
+  flex: 0 0 120px;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.battery-bar div {
+  height: 100%;
+  background: var(--soc);
+}
+
+.next-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.next-icon {
+  font-size: 28px;
+}
+
+.next-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.next-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ---------- Прилади кнопками ---------- */
+
+.device-picker h3 {
+  margin: 14px 0 2px;
+}
+
+.device-picker h3:first-child {
+  margin-top: 0;
+}
+
+.device-tiles {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.device-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.device-icon {
+  font-size: 20px;
+}
+
+.device-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-power {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.device-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+}
+
+.chip.selected {
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* ---------- Майстер першого запуску ---------- */
+
+.onboarding-hello {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.stepper {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  flex-wrap: wrap;
+}
+
+.stepper li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.stepper li span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.stepper li.active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stepper li.active span,
+.stepper li.done span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.onboarding-step h2 {
+  margin-bottom: 6px;
+}
+
+.onboarding-step .checkbox {
+  margin-top: 12px;
+}
+
+.choice-buttons {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.choice-buttons .chip {
+  padding: 10px 22px;
+  font-size: 16px;
+}
+
+.onboarding-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.onboarding input[type='range'] {
+  padding: 0;
+  height: auto;
+}
+
+/* ---------- Довідка ---------- */
+
+.how-steps {
+  padding-left: 20px;
+  margin: 0 0 12px;
+}
+
+.how-steps li {
+  margin-bottom: 8px;
+}
+
+details.faq {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+details.faq > summary {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+details.faq p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.help a {
+  color: var(--accent);
+}
+
+@media print {
+  .app-header,
+  .nav-bottom,
+  .day-switch,
+  .next-step {
+    display: none !important;
+  }
+}
+
+.action-list .action.past {
+  display: none;
+}
+
+.action-list.show-past .action.past {
+  display: grid;
+}
+
+.past-toggle {
+  margin: 0 0 6px;
+}
+
+@media print {
+  .action-list .action.past {
+    display: grid;
   }
 }

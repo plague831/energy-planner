@@ -59,7 +59,6 @@ export default function Autonomy({ household, onChange }) {
 
   return (
     <section className="card autonomy">
-      <h2>Скільки протримається</h2>
       <p className="hint">Відмітьте, що хочете живити під час відключення, і побачите, на скільки вистачить кожного джерела.</p>
 
       <div className="autonomy-inputs">

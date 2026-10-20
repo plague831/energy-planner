@@ -10,6 +10,8 @@ const time = (slot) => {
 // Для плану на сьогодні минулі події приглушені, а перед наступною стоїть позначка «зараз».
 export default function ActionList({ result, household, isToday }) {
   const [nowSlot, setNowSlot] = useState(currentSlot);
+  // Минулі пункти за замовчуванням сховані, щоб на екрані було видно лише те, що попереду (у друці показуються всі).
+  const [showPast, setShowPast] = useState(false);
   useEffect(() => {
     const id = setInterval(() => setNowSlot(currentSlot()), 60_000);
     return () => clearInterval(id);
@@ -18,9 +20,15 @@ export default function ActionList({ result, household, isToday }) {
   const events = buildEvents(result, household);
   const skipped = result.schedule.filter((s) => s.skipped);
   const nextIndex = isToday ? events.findIndex((e) => e.slot >= nowSlot) : -1;
+  const pastCount = isToday ? events.filter((e) => e.slot < nowSlot).length : 0;
 
   return (
-    <div className="action-list">
+    <div className={`action-list ${showPast ? 'show-past' : ''}`}>
+      {pastCount > 0 && (
+        <button type="button" className="link-button past-toggle no-print" onClick={() => setShowPast(!showPast)}>
+          {showPast ? 'Сховати те, що вже минуло' : `Показати, що вже минуло (${pastCount})`}
+        </button>
+      )}
       <ol>
         {events.map((e, i) => (
           <li key={`${e.slot}-${i}`} className={`action ${e.kind} ${isToday && e.slot < nowSlot ? 'past' : ''}`}>
