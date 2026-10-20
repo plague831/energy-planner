@@ -17,7 +17,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Pt
+from docx.shared import Mm, Pt
 
 BODY = '0'          # «0» у шаблоні: основний текст з відступом 1,25 см
 H1, H2 = '1', '2'
@@ -102,6 +102,14 @@ def caption_above(doc, text):
 def table(doc, rows):
     t = doc.add_table(rows=len(rows), cols=len(rows[0]))
     t.style = doc.styles['Table Grid']
+    t.autofit = False
+    ncols = len(rows[0])
+    unit = Mm(170) / (ncols + 0.5)          # ширина тексту 170 мм, перша колонка ширша
+    size = 11 if ncols > 5 else 12
+    for c, col in enumerate(t.columns):
+        col.width = int(unit * (1.5 if c == 0 else 1))
+        for cell in col.cells:
+            cell.width = col.width
     for r, row in enumerate(rows):
         for c, cell in enumerate(row):
             p = t.cell(r, c).paragraphs[0]
@@ -109,7 +117,7 @@ def table(doc, rows):
             p.paragraph_format.line_spacing = 1.0
             if r == 0:
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            add_runs(p, cell, size=12, subscripts=False)
+            add_runs(p, cell, size=size, subscripts=False)
             if r == 0:
                 for run in p.runs:
                     run.bold = False
