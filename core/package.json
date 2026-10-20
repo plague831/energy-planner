@@ -13,6 +13,7 @@
     "test": "node --test test/*.test.js",
     "experiment": "node experiments/compare.js",
     "experiment:stats": "node experiments/statistical.js",
-    "experiment:sensitivity": "node experiments/sensitivity.js"
+    "experiment:sensitivity": "node experiments/sensitivity.js",
+    "experiment:multisource": "node experiments/multisource.js"
   }
 }
