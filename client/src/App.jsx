@@ -68,6 +68,8 @@ export default function App() {
   const [scheduleNote, setScheduleNote] = useState(null);
   // Людина, яка вже має збережені дані, вважається такою, що пройшла майстер.
   const [onboarded, setOnboarded] = useState(() => Boolean(storage.get(ONBOARDED_KEY) || readSaved()));
+  // Зміни в «Мій дім» спершу потрапляють у чернетку і застосовуються кнопкою «Зберегти».
+  const [draft, setDraft] = useState(null);
   const [hasQueue, setHasQueue] = useState(() => Boolean(readChoice().source && readChoice().group));
   const planRequest = useRef(0);
   const notify = useToast();
@@ -153,8 +155,35 @@ export default function App() {
     setPlanDay({ day: meta.day, date: meta.date });
     setScheduleNote(null);
     setHasQueue(true);
+    // Завантаження графіка — окрема явна дія, тож він застосовується одразу (і в чернетку, якщо вона є).
     setHousehold((h) => ({ ...h, outages, possibleOutages: meta.possible ?? [] }));
+    setDraft((d) => (d ? { ...d, outages, possibleOutages: meta.possible ?? [] } : d));
   };
+
+  const editDraft = (next) => setDraft(JSON.stringify(next) === JSON.stringify(household) ? null : next);
+
+  const saveDraft = () => {
+    if (!draft) return;
+    setHousehold(draft);
+    setDraft(null);
+    notify('success', 'Зміни збережено, план перераховано');
+  };
+
+  const cancelDraft = () => {
+    setDraft(null);
+    notify('info', 'Зміни скасовано');
+  };
+
+  // Попередження, якщо закрити вкладку з незбереженими змінами.
+  useEffect(() => {
+    if (!draft) return;
+    const warn = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [draft]);
 
   const finishOnboarding = ({ household: h, choice }) => {
     if (choice) saveChoice(choice);
@@ -203,6 +232,7 @@ export default function App() {
 
   const resetToDemo = () => {
     setHousehold(defaults);
+    setDraft(null);
     setComparison(null);
     notify('info', 'Дані замінено демонстраційним прикладом');
   };
@@ -264,7 +294,25 @@ export default function App() {
             onExportCalendar={exportCalendar}
           />
         )}
-        {route === 'home' && <MyHome household={household} onChange={setHousehold} onOutagesLoaded={onOutagesLoaded} />}
+        {route === 'home' && (
+          <>
+            <MyHome household={draft ?? household} onChange={editDraft} onOutagesLoaded={onOutagesLoaded} />
+            <div className="save-footer no-print">
+              {draft ? (
+                <>
+                  <button type="button" onClick={saveDraft}>
+                    Зберегти зміни
+                  </button>
+                  <button type="button" className="secondary" onClick={cancelDraft}>
+                    Скасувати
+                  </button>
+                </>
+              ) : (
+                <span className="muted">✓ Усі зміни збережено</span>
+              )}
+            </div>
+          </>
+        )}
         {route === 'autonomy' && <Autonomy household={household} onChange={setHousehold} />}
         {route === 'details' && (
           <Details
@@ -284,6 +332,22 @@ export default function App() {
         )}
         {route === 'help' && <Help />}
       </main>
+
+      {draft && (
+        <div className="save-bar no-print" role="status">
+          <span>
+            Є незбережені зміни{route !== 'home' ? ' в «Мій дім»' : ''}
+          </span>
+          <div>
+            <button type="button" className="secondary" onClick={cancelDraft}>
+              Скасувати
+            </button>
+            <button type="button" onClick={saveDraft}>
+              Зберегти
+            </button>
+          </div>
+        </div>
+      )}
 
       <nav className="nav-bottom no-print" aria-label="Розділи">
         {PAGES.map((p) => (

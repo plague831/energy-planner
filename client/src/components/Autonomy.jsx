@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { batterySource, generatorSource, solarSource, estimateAutonomy } from '@energy-planner/core/autonomy';
 import { appliancePresets, baseLoadPresets } from '../presets.js';
+import { EnergyBreakdown, DischargeChart, clock, hoursText } from './AutonomyCharts.jsx';
 
 const DEFAULT_GENERATOR = { ratedW: 2500, tankHoursAtHalf: 8, fuelPct: 100 };
 const DEFAULT_SOLAR = { peakW: 800, sunHours: 3 };
@@ -147,13 +148,59 @@ export default function Autonomy({ household, onChange }) {
       ) : consumers.length === 0 ? (
         <p className="muted">Відмітьте хоча б одного споживача.</p>
       ) : (
-        <div className="source-results">
-          {estimate.sources.map((r) => (
-            <SourceResult key={r.name} r={r} />
-          ))}
-        </div>
+        <>
+          <Conclusion estimate={estimate} household={household} />
+          <div className="source-results">
+            {estimate.sources.map((r) => (
+              <SourceResult key={r.name} r={r} />
+            ))}
+          </div>
+          <div className="autonomy-charts">
+            <DischargeChart series={dischargeSeries(estimate, household)} />
+            <EnergyBreakdown consumers={consumers} hours={estimate.sources.find((r) => r.kind !== 'solar' && !r.overloaded)?.hours} />
+          </div>
+        </>
       )}
     </section>
+  );
+}
+
+// Скільки працює джерело на тих споживачах, які воно реально витягне (при перевантаженні — без зайвих).
+const runHours = (r) => (r.overloaded ? r.fitted?.hours : r.hours);
+
+// Кольори закріплені за типом джерела в усіх графіках.
+const SERIES_COLOR = { battery: '--series-1', generator: '--series-2' };
+
+function dischargeSeries(estimate, household) {
+  return estimate.sources
+    .filter((r) => r.kind !== 'solar' && Number.isFinite(runHours(r)))
+    .map((r) => ({
+      name: r.kind === 'battery' ? 'Станція (заряд)' : 'Генератор (пальне)',
+      color: SERIES_COLOR[r.kind],
+      hours: runHours(r),
+      startPct: r.kind === 'battery' ? Number(household.battery.initialSocPct ?? 100) : Number(household.generator.fuelPct ?? 100),
+      endPct: r.kind === 'battery' ? Number(household.battery.minSocPct ?? 10) : 0,
+    }));
+}
+
+// Висновок простими словами: до котрої години вистачить кожного джерела, якщо світло зникне зараз.
+function Conclusion({ estimate }) {
+  const now = new Date();
+  const usable = estimate.sources.filter((r) => r.kind !== 'solar' && Number.isFinite(runHours(r)));
+  if (!usable.length) return null;
+  const total = usable.reduce((s, r) => s + runHours(r), 0);
+  const parts = usable.map((r) => `${r.kind === 'battery' ? 'станції' : 'генератора'} — до ${clock(now, runHours(r))} (${hoursText(runHours(r))})`);
+  return (
+    <div className="conclusion">
+      <div className="conclusion-label">Якщо світло зникне зараз, о {now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div className="conclusion-main">Вистачить: {parts.join(', ')}.</div>
+      {usable.length > 1 && total < 48 && (
+        <div className="conclusion-sub">
+          Якщо використовувати джерела по черзі, разом протримаєтесь {hoursText(total)}, до {clock(now, total)}.
+        </div>
+      )}
+      {usable.some((r) => r.overloaded) && <div className="conclusion-sub">Для перевантажених джерел час указано без приладів, які доведеться вимкнути (див. нижче).</div>}
+    </div>
   );
 }
 
