@@ -17,6 +17,8 @@
   --bad: #b91c1c;
   --series-1: #2a78d6;
   --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235d6878' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   color-scheme: light;
 }
@@ -41,6 +43,8 @@
     --bad: #f87171;
     --series-1: #3987e5;
     --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
     --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239aa5b5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
@@ -1597,4 +1601,51 @@ details.faq p {
 
 .chart-caption {
   margin: 6px 0 0;
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* ---------- Джерела живлення в «Мій дім» ---------- */
+
+.sources-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.source-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.source-card-icon {
+  font-size: 22px;
+}
+
+.source-card-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.source-card .grid-fields {
+  margin-bottom: 0;
+}
+
+.source-card details.more {
+  margin-top: 10px;
 }

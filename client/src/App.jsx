@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getDefaults, getAlgorithms, buildPlan } from './api.js';
 import { readChoice, saveChoice, loadDay } from './yasno.js';
+import { migrateHousehold } from './sources.js';
 import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
@@ -16,7 +17,7 @@ const ONBOARDED_KEY = 'energy-planner:onboarded';
 const PAGES = [
   { id: 'today', icon: '☀️', label: 'Сьогодні' },
   { id: 'home', icon: '🏠', label: 'Мій дім' },
-  { id: 'autonomy', icon: '🔋', label: 'Скільки протримається', short: 'Запас' },
+  { id: 'backup', icon: '🔋', label: 'Резервне живлення', short: 'Резерв' },
   { id: 'details', icon: '📊', label: 'Детально' },
   { id: 'help', icon: '❓', label: 'Як це працює', short: 'Довідка' },
 ];
@@ -42,7 +43,7 @@ const storage = {
 function readSaved() {
   try {
     const saved = JSON.parse(storage.get(STORAGE_KEY));
-    return saved && Array.isArray(saved.appliances) && Array.isArray(saved.baseLoads) ? saved : null;
+    return saved && Array.isArray(saved.appliances) && Array.isArray(saved.baseLoads) ? migrateHousehold(saved) : null;
   } catch {
     return null;
   }
@@ -86,8 +87,9 @@ export default function App() {
   useEffect(() => {
     Promise.all([getDefaults(), getAlgorithms()])
       .then(([d, list]) => {
-        setDefaults(d.household);
-        setHousehold(readSaved() ?? d.household);
+        const demo = migrateHousehold(d.household);
+        setDefaults(demo);
+        setHousehold(readSaved() ?? demo);
         setAlgorithms(list);
       })
       .catch((e) => setError(e.message));
@@ -313,7 +315,7 @@ export default function App() {
             </div>
           </>
         )}
-        {route === 'autonomy' && <Autonomy household={household} onChange={setHousehold} />}
+        {route === 'backup' && <Autonomy household={household} />}
         {route === 'details' && (
           <Details
             household={household}

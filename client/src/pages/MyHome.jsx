@@ -1,8 +1,9 @@
 import ListEditor from '../components/ListEditor.jsx';
 import OutageImport from '../components/OutageImport.jsx';
 import DevicePicker from '../components/DevicePicker.jsx';
-import { useToast } from '../components/Toasts.jsx';
-import { appliancePresets, baseLoadPresets, stationPresets } from '../presets.js';
+import SourcesEditor from '../components/SourcesEditor.jsx';
+import { withSources } from '../sources.js';
+import { appliancePresets, baseLoadPresets } from '../presets.js';
 
 const outageColumns = [
   { key: 'from', label: 'З', type: 'time' },
@@ -28,18 +29,10 @@ const applianceColumns = [
   { key: 'allowOnBattery', label: 'Від станції', type: 'checkbox' },
 ];
 
-export const DEFAULT_BATTERY = { capacityWh: 1024, initialSocPct: 70, minSocPct: 10, targetEndSocPct: 60, maxChargeW: 600, inverterMaxW: 1800 };
-
 // «Мій дім»: усе, що описує домогосподарство, у трьох кроках. Прості поля на виду,
 // точні технічні параметри — у розгорнутих блоках «Додатково».
 export default function MyHome({ household, onChange, onOutagesLoaded }) {
-  const notify = useToast();
   const set = (key, value) => onChange({ ...household, [key]: value });
-  const battery = household.battery;
-  const setBattery = (key, value) => {
-    const specChanged = ['capacityWh', 'inverterMaxW', 'maxChargeW'].includes(key);
-    set('battery', { ...battery, [key]: value, ...(specChanged ? { model: undefined } : {}) });
-  };
 
   return (
     <div className="page-stack">
@@ -64,48 +57,10 @@ export default function MyHome({ household, onChange, onOutagesLoaded }) {
 
       <section className="card">
         <h2>
-          <span className="step">2</span> Зарядна станція
+          <span className="step">2</span> Джерела живлення
         </h2>
-        <label className="checkbox">
-          <input type="checkbox" checked={Boolean(battery)} onChange={(e) => set('battery', e.target.checked ? DEFAULT_BATTERY : null)} />
-          У мене є зарядна станція або акумулятор з інвертором
-        </label>
-        {battery && (
-          <>
-            <div className="grid-fields station-simple">
-              <label className="field">
-                <span>Модель</span>
-                <select
-                  value={stationPresets.findIndex((p) => p.name === battery.model)}
-                  onChange={(e) => {
-                    const preset = stationPresets[Number(e.target.value)];
-                    const { name, ...specs } = preset ?? {};
-                    onChange({ ...household, battery: preset ? { ...battery, ...specs, model: name } : { ...battery, model: undefined } });
-                    if (preset) notify('success', `Підставлено параметри станції ${name}`);
-                  }}
-                >
-                  <option value={-1}>Інша (вказати параметри вручну)</option>
-                  {stationPresets.map((p, i) => (
-                    <option key={p.name} value={i}>
-                      {p.name} ({p.capacityWh} Вт·год)
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <NumberField label="Заряд зараз, %" value={battery.initialSocPct} onChange={(v) => setBattery('initialSocPct', v)} />
-            </div>
-            <details className="more">
-              <summary>Додаткові параметри станції</summary>
-              <div className="grid-fields">
-                <NumberField label="Ємність, Вт·год" value={battery.capacityWh} onChange={(v) => setBattery('capacityWh', v)} />
-                <NumberField label="Не розряджати нижче, %" value={battery.minSocPct} onChange={(v) => setBattery('minSocPct', v)} />
-                <NumberField label="Бажаний заряд на кінець доби, %" value={battery.targetEndSocPct} onChange={(v) => setBattery('targetEndSocPct', v)} />
-                <NumberField label="Потужність заряджання, Вт" value={battery.maxChargeW} onChange={(v) => setBattery('maxChargeW', v)} />
-                <NumberField label="Макс. потужність інвертора, Вт" value={battery.inverterMaxW} onChange={(v) => setBattery('inverterMaxW', v)} />
-              </div>
-            </details>
-          </>
-        )}
+        <p className="hint">Що допомагає пережити відключення: зарядні станції, генератор, сонячні панелі. Можна додати кілька.</p>
+        <SourcesEditor sources={household.sources ?? []} onChange={(sources) => onChange(withSources(household, sources))} />
         <details className="more">
           <summary>Обмеження мережі</summary>
           <p className="hint">Скільки ват одночасно витримує ваша проводка чи автомат. Якщо не знаєте, залиште 5000.</p>

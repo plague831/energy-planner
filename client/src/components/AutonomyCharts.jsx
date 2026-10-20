@@ -93,12 +93,13 @@ export function DischargeChart({ series }) {
               <polyline className="chart-line" points={`${px(0)},${py(s.startPct)} ${px(Math.min(s.hours, maxHours))},${py(valueAt(s, Math.min(s.hours, maxHours)))}`} />
               <circle className="chart-dot" cx={px(0)} cy={py(s.startPct)} r={4.5} />
               {s.hours <= maxHours && <circle className="chart-dot" cx={px(s.hours)} cy={py(s.endPct)} r={4.5} />}
-              {s.hours <= maxHours && (
-                <text className="chart-label" x={Math.min(px(s.hours), W - M.right - 4)} y={py(s.endPct) - 10} textAnchor="end">
-                  до {clock(now, s.hours)}
-                </text>
-              )}
+
             </g>
+          ))}
+          {endLabels(series, maxHours, px, py, now).map((l) => (
+            <text key={l.key} className="chart-label" x={l.x} y={l.y} textAnchor="end">
+              {l.text}
+            </text>
           ))}
           {hover !== null && <line className="chart-cross" x1={px(hover)} x2={px(hover)} y1={M.top} y2={H - M.bottom} />}
           <rect x={M.left} y={M.top} width={W - M.left - M.right} height={H - M.top - M.bottom} fill="transparent" />
@@ -117,6 +118,20 @@ export function DischargeChart({ series }) {
       <p className="hint chart-caption">По горизонталі — час доби, якщо світло зникне зараз; по вертикалі — залишок заряду станції або пального в генераторі.</p>
     </div>
   );
+}
+
+// Підписи «до HH:MM» біля кінців ліній: однакові об'єднуються, близькі розсуваються по вертикалі, щоб не накладались.
+function endLabels(series, maxHours, px, py, now) {
+  const labels = [];
+  for (const s of series.filter((x) => x.hours <= maxHours).sort((a, b) => a.hours - b.hours)) {
+    const text = `до ${clock(now, s.hours)}`;
+    const x = Math.min(px(s.hours), W - M.right - 4);
+    let y = py(s.endPct) - 10;
+    if (labels.some((l) => l.text === text && Math.abs(l.x - x) < 2)) continue;
+    while (labels.some((l) => Math.abs(l.y - y) < 15 && Math.abs(l.x - x) < 130)) y -= 15;
+    labels.push({ key: `${s.name}-${text}`, text, x, y });
+  }
+  return labels;
 }
 
 // Час доби через hours годин від from; оцінка наближена, тож округлюємо до 10 хвилин.

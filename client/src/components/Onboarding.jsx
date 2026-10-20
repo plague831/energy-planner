@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { loadSources, loadGroups } from '../yasno.js';
 import { iconFor } from '../icons.js';
 import { appliancePresets, baseLoadPresets, stationPresets } from '../presets.js';
-import { DEFAULT_BATTERY } from '../pages/MyHome.jsx';
+import { newSource, withSources } from '../sources.js';
 
 const DEFAULT_BASE = ['Холодильник', 'Роутер і ONT', 'Освітлення (LED)'];
 const DEFAULT_APPLIANCES = ['Пральна машина', 'Бойлер', 'Електрочайник'];
@@ -52,16 +52,17 @@ export default function Onboarding({ onFinish, onSkip }) {
 
   const finish = () => {
     const preset = stationPresets[model];
-    const battery = hasStation ? { ...DEFAULT_BATTERY, ...(preset ? { capacityWh: preset.capacityWh, inverterMaxW: preset.inverterMaxW, maxChargeW: preset.maxChargeW, model: preset.name } : {}), initialSocPct: soc } : null;
+    const station = preset
+      ? newSource('battery', { capacityWh: preset.capacityWh, inverterMaxW: preset.inverterMaxW, maxChargeW: preset.maxChargeW, model: preset.name, name: `Станція ${preset.name}`, initialSocPct: soc })
+      : newSource('battery', { initialSocPct: soc });
     const stamp = Date.now();
     onFinish({
-      household: {
+      household: withSources({
         grid: { maxPowerW: 5000 },
-        battery,
         outages: [],
         baseLoads: baseLoadPresets.filter((p) => base.has(p.name)).map((p, i) => ({ id: `base-${stamp}-${i}`, ...p })),
         appliances: appliancePresets.filter((p) => apps.has(p.name)).map((p, i) => ({ id: `appliance-${stamp}-${i}`, ...p })),
-      },
+      }, hasStation ? [station] : []),
       choice: noQueue || !source || !group ? null : { source, group, day: 'today', auto: true },
     });
   };
@@ -119,6 +120,7 @@ export default function Onboarding({ onFinish, onSkip }) {
         {step === 1 && (
           <div className="onboarding-step">
             <h2>Чи є у вас зарядна станція?</h2>
+            <p className="hint">Генератор, сонячні панелі чи ще одну станцію можна буде додати потім у «Мій дім».</p>
             <div className="choice-buttons">
               <button type="button" className={hasStation === true ? 'chip selected' : 'chip'} onClick={() => setHasStation(true)}>
                 🔋 Так, є
