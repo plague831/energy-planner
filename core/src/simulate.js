@@ -123,7 +123,7 @@ export function simulate(model, starts, grid, weights = DEFAULT_WEIGHTS, options
     if (energy < minEnergy) minEnergy = energy;
 
     if (trace) {
-      trace.push({ slot: t, gridOn, demandW: demandAt(model, starts, t), servedW: served, chargeW, energyWh: energy, solarW: solarUsed, generatorW: genW, fuelPct: fuel.length ? (fuel.reduce((a, b) => a + b, 0) / fuel.length) * 100 : null });
+      trace.push({ slot: t, gridOn, demandW: demandAt(model, starts, t), servedW: served, chargeW, energyWh: energy, solarW: solarUsed, generatorW: genW, fuelPct: fuel.length ? (fuel.reduce((a, b) => a + b, 0) / fuel.length) * 100 : null, generatorsOn: generators.length ? running.map((r) => r && genW > 0) : undefined, generatorsFuelPct: generators.length ? fuel.map((f) => f * 100) : undefined });
     }
   }
 
@@ -131,8 +131,13 @@ export function simulate(model, starts, grid, weights = DEFAULT_WEIGHTS, options
   let preferencePoints = 0;
   const completed = [];
   const failedIds = [];
+  const missedIds = [];
   for (let i = 0; i < appliances.length; i++) {
     const a = appliances[i];
+    if (a.missed) {
+      missedIds.push(a.id);
+      continue;
+    }
     if (starts[i] === SKIP || failed[i]) {
       failedPoints += a.priority;
       failedIds.push(a.id);
@@ -157,6 +162,7 @@ export function simulate(model, starts, grid, weights = DEFAULT_WEIGHTS, options
     shedBaseWh,
     failedIds,
     completedIds: completed,
+    missedIds,
     preferencePoints,
     endShortfall,
     minSocPct: battery ? (minEnergy / battery.capacityWh) * 100 : null,

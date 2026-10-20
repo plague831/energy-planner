@@ -111,3 +111,15 @@ test('план повертає правило запуску генератор
   // Без генератора бойлер у відключення не відпрацює, тому ГА має вирішити його вмикати.
   assert.notEqual(result.generators[0].thresholdPct, null);
 });
+
+test('прилад, вікно якого минуло до перепланування, не рахується провалом', () => {
+  const household = {
+    ...noBattery,
+    outages: [],
+    appliances: [{ id: 'kettle', name: 'Чайник', powerW: 1800, durationMin: 15, earliest: '07:00', latest: '09:00', priority: 3 }],
+  };
+  const result = plan(household, { algorithm: 'greedy', replan: { nowSlot: timeToSlot('12:00') } });
+  assert.deepEqual(result.nominal.failedIds, []);
+  assert.deepEqual(result.nominal.missedIds, ['kettle']);
+  assert.equal(result.schedule[0].missed, true);
+});

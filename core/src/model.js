@@ -80,6 +80,8 @@ export function buildModel(household, replan = null) {
     }
     return {
       ...domain,
+      // Під час перепланування: вікно приладу вже минуло, а він не вмикався — це не провал плану, а пропущене.
+      missed: domain.earliest === SKIP,
       originalEarliest: earliest,
       id,
       name,

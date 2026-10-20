@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { getDefaults, getAlgorithms, buildPlan } from './api.js';
 import { readChoice, saveChoice, loadDay } from './yasno.js';
-import { migrateHousehold } from './sources.js';
+import { migrateHousehold, withSources } from './sources.js';
+import { planDay as computePlan } from './planning.js';
 import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
@@ -67,6 +68,8 @@ export default function App() {
   // Для якого дня складено графік (сьогодні / завтра), щоб показувати позначку «зараз» лише для сьогодні.
   const [planDay, setPlanDay] = useState(null);
   const [scheduleNote, setScheduleNote] = useState(null);
+  // Що змінилось у плані після оновлення графіка протягом дня.
+  const [replanNote, setReplanNote] = useState(null);
   // Людина, яка вже має збережені дані, вважається такою, що пройшла майстер.
   const [onboarded, setOnboarded] = useState(() => Boolean(storage.get(ONBOARDED_KEY) || readSaved()));
   // Зміни в «Мій дім» спершу потрапляють у чернетку і застосовуються кнопкою «Зберегти».
@@ -133,16 +136,22 @@ export default function App() {
   }, [household, onboarded]);
 
   // План перераховується сам після кожної зміни даних (з невеликою затримкою, поки людина вводить).
+  // План на сьогодні будується з поточного моменту; якщо змінився графік, людина бачить, що саме перенесено.
+  const day = planDay?.day ?? 'today';
   useEffect(() => {
     if (!household || !onboarded) return;
     const id = ++planRequest.current;
     const timer = setTimeout(async () => {
       setBusy(true);
       try {
-        const plan = await buildPlan(household, algorithm);
+        const { result: plan, changed } = await computePlan(household, algorithm, { day });
         if (id === planRequest.current) {
           setResult(plan);
           setError(null);
+          if (changed) {
+            setReplanNote(changed);
+            notify('info', `Графік змінився, план на решту дня перебудовано з ${changed.at}`);
+          }
         }
       } catch (e) {
         if (id === planRequest.current) setError(e.message);
@@ -151,7 +160,18 @@ export default function App() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [household, algorithm, onboarded]);
+  }, [household, algorithm, onboarded, day]);
+
+  // Поки сторінка відкрита, графік на сьогодні перевіряється кожні 10 хвилин,
+  // а план на решту дня оновлюється з поточного моменту.
+  useEffect(() => {
+    if (!onboarded || day !== 'today') return;
+    const id = setInterval(() => {
+      if (readChoice().auto !== false) loadSchedule('today', { silent: true });
+      else setHousehold((h) => ({ ...h }));
+    }, 10 * 60_000);
+    return () => clearInterval(id);
+  }, [onboarded, day]);
 
   const onOutagesLoaded = (outages, meta) => {
     setPlanDay({ day: meta.day, date: meta.date });
@@ -219,7 +239,7 @@ export default function App() {
 
   const makePlan = () =>
     run(async () => {
-      const plan = await buildPlan(household, algorithm);
+      const { result: plan } = await computePlan(household, algorithm, { day });
       setResult(plan);
       notify('success', `План складено: ${plan.algorithmName}`);
     });
@@ -237,6 +257,12 @@ export default function App() {
     setDraft(null);
     setComparison(null);
     notify('info', 'Дані замінено демонстраційним прикладом');
+  };
+
+  // Людина вказує фактичний заряд станцій зараз — план на решту дня перебудовується від нього.
+  const setCurrentCharge = (pct) => {
+    setHousehold((h) => withSources(h, (h.sources ?? []).map((s) => (s.kind === 'battery' ? { ...s, initialSocPct: pct } : s))));
+    notify('success', `Заряд ${pct}% враховано, план перебудовано`);
   };
 
   const exportCalendar = () => {
@@ -291,6 +317,9 @@ export default function App() {
             busy={busy}
             planDay={planDay}
             scheduleNote={scheduleNote}
+            replanNote={replanNote}
+            onDismissReplan={() => setReplanNote(null)}
+            onSetCharge={setCurrentCharge}
             hasQueue={hasQueue}
             onSelectDay={(day) => loadSchedule(day)}
             onExportCalendar={exportCalendar}

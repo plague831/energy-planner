@@ -94,8 +94,8 @@ export default function SourcesEditor({ sources, onChange }) {
         ))}
       </div>
       {count('battery') > 1 && <p className="hint">План заряджання враховує всі станції разом, як одну з сумарною ємністю.</p>}
-      {sources.some((s) => s.kind !== 'battery') && (
-        <p className="hint">Генератор і панелі зараз враховуються в розділі «Резервне живлення»; у плані на день — лише зарядні станції.</p>
+      {sources.some((s) => s.kind === 'generator') && (
+        <p className="hint">План сам підбере, з якого заряду станції варто вмикати генератор, щоб вистачило і пального, і енергії.</p>
       )}
     </div>
   );

@@ -1649,3 +1649,59 @@ details.faq p {
 .source-card details.more {
   margin-top: 10px;
 }
+
+.action.generator .action-dot {
+  background: var(--series-2);
+  border-radius: 2px;
+}
+
+.notice.replan {
+  position: relative;
+  border-left-color: var(--accent);
+  padding-right: 44px;
+}
+
+.notice.replan ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.notice-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.generator-rules {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.charge-fix {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.charge-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.charge-form .field {
+  flex: 1 1 200px;
+}
+
+.timeline .bar-generator {
+  fill: var(--series-2);
+}
+
+.timeline .bar-solar {
+  fill: var(--series-4);
+}

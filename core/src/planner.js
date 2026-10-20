@@ -80,7 +80,7 @@ export function plan(household, options = {}) {
 export function describeSchedule(model, starts) {
   return model.appliances.map((a, i) => {
     const s = starts[i];
-    if (s === SKIP) return { id: a.id, name: a.name, skipped: true };
+    if (s === SKIP) return { id: a.id, name: a.name, skipped: true, missed: Boolean(a.missed) };
     return {
       id: a.id,
       name: a.name,

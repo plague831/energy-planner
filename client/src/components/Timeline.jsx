@@ -13,7 +13,14 @@ export default function Timeline({ result, household }) {
   const top = 30;
   const gridRowY = top;
   const appliancesY = gridRowY + ROW_H + 8;
-  const chartY = appliancesY + rows.length * ROW_H + 16;
+  // Окремі рядки для генератора і сонця, якщо вони є в плані.
+  const hasGenerator = (result.generators ?? []).length > 0;
+  const hasSolar = trace.some((t) => (t.solarW ?? 0) > 0);
+  const extraY = appliancesY + rows.length * ROW_H;
+  const generatorY = extraY;
+  const solarY = extraY + (hasGenerator ? ROW_H : 0);
+  const maxSolar = Math.max(1, ...trace.map((t) => t.solarW ?? 0));
+  const chartY = extraY + (hasGenerator ? ROW_H : 0) + (hasSolar ? ROW_H : 0) + 16;
   const height = chartY + (household.battery ? CHART_H + 24 : 0);
 
   const outageRuns = runs(trace.map((t) => !t.gridOn));
@@ -86,6 +93,40 @@ export default function Timeline({ result, household }) {
           );
         })}
 
+        {hasGenerator && (
+          <g>
+            <text className="row-label" x={8} y={generatorY + 23}>
+              Генератор
+            </text>
+            {runs(trace.map((t) => (t.generatorW ?? 0) > 0)).map(([from, to]) => (
+              <g key={`g${from}`}>
+                <rect className="bar bar-generator" x={x(from)} y={generatorY + 5} width={(to - from) * SLOT_W} height={ROW_H - 10} rx={4} />
+                <text className="bar-label" x={x(to) + 6} y={generatorY + 23}>
+                  {slotTime(from)}–{slotTime(to)}
+                </text>
+              </g>
+            ))}
+            {!trace.some((t) => (t.generatorW ?? 0) > 0) && (
+              <text className="skipped" x={x(0) + 6} y={generatorY + 23}>
+                сьогодні не знадобиться
+              </text>
+            )}
+          </g>
+        )}
+
+        {hasSolar && (
+          <g>
+            <text className="row-label" x={8} y={solarY + 23}>
+              Сонячні панелі
+            </text>
+            {trace.map((t, i) =>
+              (t.solarW ?? 0) > 0 ? (
+                <rect key={`s${i}`} className="bar-solar" x={x(i)} y={solarY + 5 + (ROW_H - 10) * (1 - t.solarW / maxSolar)} width={SLOT_W} height={(ROW_H - 10) * (t.solarW / maxSolar)} />
+              ) : null,
+            )}
+          </g>
+        )}
+
         {capacity && (
           <g>
             <text className="row-label" x={8} y={chartY + 16}>
@@ -114,6 +155,11 @@ export default function Timeline({ result, household }) {
 function toSlot(time) {
   const [h, m] = time.split(':').map(Number);
   return Math.round((h * 60 + m) / 15);
+}
+
+function slotTime(slot) {
+  const m = slot * 15;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
 function x(slot) {

@@ -15,7 +15,7 @@ const nowSlotOf = () => {
 
 // Головний екран для звичайного користувача: що зі світлом зараз, скільки до відключення,
 // що з зарядом станції і що робити далі. Усе технічне — у розділі «Детально».
-export default function Today({ household, result, busy, planDay, scheduleNote, hasQueue, onSelectDay, onExportCalendar }) {
+export default function Today({ household, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, onSetCharge, hasQueue, onSelectDay, onExportCalendar }) {
   const [now, setNow] = useState(nowSlotOf);
   useEffect(() => {
     const id = setInterval(() => setNow(nowSlotOf()), 30_000);
@@ -45,7 +45,25 @@ export default function Today({ household, result, busy, planDay, scheduleNote, 
 
       {scheduleNote && <section className="card notice warn">{scheduleNote}</section>}
 
-      {!isTomorrow && <PowerStatus household={household} result={result} now={now} />}
+      {replanNote && !isTomorrow && (
+        <section className="card notice replan">
+          <button type="button" className="icon-button notice-close" onClick={onDismissReplan} aria-label="Закрити">
+            ×
+          </button>
+          <strong>🔄 Графік відключень змінився.</strong> План на решту дня перебудовано о {replanNote.at}.
+          {replanNote.moved.length > 0 ? (
+            <ul>
+              {replanNote.moved.map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+          ) : (
+            <div className="muted">Час приладів лишився тим самим.</div>
+          )}
+        </section>
+      )}
+
+      {!isTomorrow && <PowerStatus household={household} result={result} now={now} onSetCharge={onSetCharge} />}
 
       <section className="card">
         <h2>
@@ -57,6 +75,7 @@ export default function Today({ household, result, busy, planDay, scheduleNote, 
         ) : (
           <>
             <NextStep result={result} now={isTomorrow ? -1 : now} />
+            <GeneratorRules generators={result.generators ?? []} />
             <ActionList result={result} household={household} isToday={!isTomorrow} />
             <div className="plan-actions no-print">
               <button type="button" className="secondary" onClick={onExportCalendar}>
@@ -73,7 +92,25 @@ export default function Today({ household, result, busy, planDay, scheduleNote, 
   );
 }
 
-function PowerStatus({ household, result, now }) {
+function GeneratorRules({ generators }) {
+  if (!generators.length) return null;
+  return (
+    <ul className="generator-rules">
+      {generators.map((g) => (
+        <li key={g.id}>
+          ⛽ <strong>{g.name}:</strong>{' '}
+          {g.thresholdPct === null
+            ? 'сьогодні не знадобиться.'
+            : g.noBattery
+              ? 'вмикайте на початку кожного відключення.'
+              : `вмикайте під час відключення, коли заряд станції впаде до ${g.thresholdPct}%, і вимикайте, коли підзарядиться до ${Math.min(95, g.thresholdPct + 30)}%.`}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function PowerStatus({ household, result, now, onSetCharge }) {
   const outages = (household.outages ?? []).map((o) => {
     const from = toSlot(o.from);
     let to = toSlot(o.to);
@@ -115,7 +152,41 @@ function PowerStatus({ household, result, now }) {
           </span>
         </div>
       )}
+      {capacity && <ChargeCorrection onSetCharge={onSetCharge} />}
     </section>
+  );
+}
+
+// Якщо реальний заряд відрізняється від розрахунку, людина вводить його, і план перебудовується від нього.
+function ChargeCorrection({ onSetCharge }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('');
+  if (!open) {
+    return (
+      <button type="button" className="link-button charge-fix" onClick={() => setOpen(true)}>
+        Насправді заряд інший? Уточнити
+      </button>
+    );
+  }
+  const submit = (e) => {
+    e.preventDefault();
+    const pct = Number(value);
+    if (!(pct >= 0 && pct <= 100) || value === '') return;
+    onSetCharge(pct);
+    setOpen(false);
+    setValue('');
+  };
+  return (
+    <form className="charge-form" onSubmit={submit}>
+      <label className="field">
+        <span>Фактичний заряд станції зараз, %</span>
+        <input type="number" min={0} max={100} inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
+      </label>
+      <button type="submit">Перебудувати план</button>
+      <button type="button" className="secondary" onClick={() => setOpen(false)}>
+        Скасувати
+      </button>
+    </form>
   );
 }
 

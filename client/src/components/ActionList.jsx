@@ -18,7 +18,8 @@ export default function ActionList({ result, household, isToday }) {
   }, []);
 
   const events = buildEvents(result, household);
-  const skipped = result.schedule.filter((s) => s.skipped);
+  const skipped = result.schedule.filter((s) => s.skipped && !s.missed);
+  const missed = result.schedule.filter((s) => s.missed);
   const nextIndex = isToday ? events.findIndex((e) => e.slot >= nowSlot) : -1;
   const pastCount = isToday ? events.filter((e) => e.slot < nowSlot).length : 0;
 
@@ -53,6 +54,7 @@ export default function ActionList({ result, household, isToday }) {
           </li>
         )}
       </ol>
+      {missed.length > 0 && <p className="action-skipped">Час для цього вже минув: {missed.map((s) => s.name).join(', ')}.</p>}
       {skipped.length > 0 && (
         <p className="action-skipped">
           Сьогодні краще не вмикати: {skipped.map((s) => s.name).join(', ')}.
@@ -75,10 +77,14 @@ function buildEvents(result, household) {
   const energyAt = (slot) => (slot === 0 ? trace[0].energyWh - (trace[0].chargeW * SLOT_MIN) / 60 : trace[slot - 1].energyWh);
   const events = [];
 
+  const genSlots = trace.map((t) => (t.generatorW ?? 0) > 0);
   for (const [from, to] of runs(trace.map((t) => !t.gridOn))) {
+    const withGen = genSlots.slice(from, to).some(Boolean);
     const detail = capacity
-      ? `Живлення від станції: заряд ${pct(energyAt(from))} → ${pct(trace[to - 1].energyWh)}.`
-      : 'Зарядної станції немає, прилади не працюватимуть.';
+      ? `Живлення від станції${withGen ? ' і генератора' : ''}: заряд ${pct(energyAt(from))} → ${pct(trace[to - 1].energyWh)}.`
+      : withGen
+        ? 'Живлення від генератора.'
+        : 'Резервного живлення немає, прилади не працюватимуть.';
     events.push({ slot: from, time: time(from), kind: 'outage', title: `Відключення до ${time(to)}`, detail });
     if (to < trace.length) events.push({ slot: to, time: time(to), kind: 'grid', title: 'Світло має повернутися' });
   }
@@ -95,6 +101,21 @@ function buildEvents(result, household) {
     }
   }
 
+  // Окремо для кожного генератора: коли вмикати, до котрої години і скільки пального лишиться.
+  (result.generators ?? []).forEach((g, k) => {
+    const on = trace.map((t) => Boolean(t.generatorsOn?.[k]));
+    for (const [from, to] of runs(on)) {
+      const fuel = trace[to - 1].generatorsFuelPct?.[k];
+      events.push({
+        slot: from,
+        time: time(from),
+        kind: 'generator',
+        title: `Увімкніть ${g.name.charAt(0).toLowerCase()}${g.name.slice(1)} до ${time(to)}`,
+        detail: `${capacity ? `Заряд станції впав до ${pct(energyAt(from))}. ` : ''}${Number.isFinite(fuel) ? `Пального залишиться ≈ ${Math.round(fuel)}%.` : ''}`,
+      });
+    }
+  });
+
   for (const o of household.possibleOutages ?? []) {
     const slot = Math.round((Number(o.from.slice(0, 2)) * 60 + Number(o.from.slice(3))) / SLOT_MIN);
     events.push({ slot, time: o.from, kind: 'possible', title: `Можливе відключення до ${o.to}`, detail: 'YASNO попереджає про можливе відключення; краще не планувати на цей час важливе.' });
@@ -104,12 +125,15 @@ function buildEvents(result, household) {
   for (const s of result.schedule) {
     if (s.skipped) continue;
     const onBattery = Array.from({ length: s.endSlot - s.startSlot }, (_, k) => s.startSlot + k).some((t) => outageSlots.has(t));
-    const notes = [`Працює до ${s.end}${onBattery ? ', частково від станції' : ''}.`];
+    const slots = Array.from({ length: s.endSlot - s.startSlot }, (_, k) => s.startSlot + k);
+    const genShare = slots.filter((t) => genSlots[t]).length / slots.length;
+    const source = genShare === 1 ? ', від генератора' : genShare > 0 ? ', частково від генератора' : onBattery ? ', частково від станції' : '';
+    const notes = [`Працює до ${s.end}${source}.`];
     if (failed.has(s.id)) notes.push('Увага: за цим графіком прилад може не відпрацювати до кінця.');
     events.push({ slot: s.startSlot, time: s.start, kind: failed.has(s.id) ? 'appliance warn' : 'appliance', title: `Увімкніть: ${s.name}`, detail: notes.join(' ') });
   }
 
-  const order = { grid: 0, outage: 1, possible: 2, charge: 3, appliance: 4 };
+  const order = { grid: 0, outage: 1, possible: 2, generator: 3, charge: 4, appliance: 5 };
   return events.sort((a, b) => a.slot - b.slot || order[a.kind.split(' ')[0]] - order[b.kind.split(' ')[0]]);
 }
 
