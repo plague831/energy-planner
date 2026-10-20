@@ -1,8 +1,16 @@
 import { SLOTS_PER_DAY, SLOT_HOURS, SLOT_MINUTES, timeToSlot, fillInterval } from './time.js';
 
+import { SKIP } from './simulate.js';
+
+// Крок порогу запуску генератора: ген генератора k означає «вмикати, коли заряд станції впав до 5·k %».
+export const GENERATOR_THRESHOLD_STEP = 5;
+const GENERATOR_THRESHOLD_GENES = 100 / GENERATOR_THRESHOLD_STEP;
+
 // Перетворює дані домогосподарства з форми (час у форматі "ГГ:ХХ", відсотки, хвилини)
 // у внутрішню модель задачі: маски слотів, енергію в Вт·год і номери слотів.
-export function buildModel(household) {
+// replan (необов'язково) — перепланування з поточного моменту протягом дня:
+//   { nowSlot, fixedStarts: { id приладу: слот, у який він уже ввімкнувся }, socPct, fuelPct: { id генератора: % } }.
+export function buildModel(household, replan = null) {
   if (!household || typeof household !== 'object') throw new Error('Не передано дані домогосподарства');
   const T = SLOTS_PER_DAY;
 
@@ -18,6 +26,22 @@ export function buildModel(household) {
   });
 
   const battery = household.battery ? buildBattery(household.battery) : null;
+  const nowSlot = replan ? Math.max(0, Math.min(T - 1, Math.floor(replan.nowSlot ?? 0))) : 0;
+  if (battery && replan && Number.isFinite(replan.socPct)) {
+    battery.initialWh = Math.max(0, Math.min(battery.capacityWh, (replan.socPct / 100) * battery.capacityWh));
+  }
+
+  const sources = Array.isArray(household.sources) ? household.sources : [];
+  const generators = sources
+    .filter((g) => g.kind === 'generator' && Number(g.ratedW) > 0 && Number(g.tankHoursAtHalf) > 0)
+    .map((g, i) => ({
+      id: g.id ?? `generator-${i + 1}`,
+      name: g.name ?? `Генератор ${i + 1}`,
+      ratedW: Number(g.ratedW),
+      tankHoursAtHalf: Number(g.tankHoursAtHalf),
+      fuel: clamp(Number(replan?.fuelPct?.[g.id ?? `generator-${i + 1}`] ?? g.fuelPct ?? 100), 0, 100) / 100,
+    }));
+  const solar = buildSolar(sources.filter((p) => p.kind === 'solar'), T);
 
   const baseLoads = (household.baseLoads ?? []).map((b, i) => {
     const activeMask = new Uint8Array(T);
@@ -43,14 +67,24 @@ export function buildModel(household) {
     if (latestStart < earliest) {
       throw new Error(`Прилад "${name}" не вміщується у вікно ${a.earliest ?? '00:00'}–${a.latest ?? '24:00'}`);
     }
-    const preferred = a.preferredStart ? clamp(timeToSlot(a.preferredStart), earliest, latestStart) : null;
+    let preferred = a.preferredStart ? clamp(timeToSlot(a.preferredStart), earliest, latestStart) : null;
+    const id = a.id ?? `appliance-${i + 1}`;
+    // Під час перепланування вже ввімкнений прилад має фіксований старт, а решта — не раніше поточного моменту.
+    let domain = { earliest, latestStart };
+    if (replan) {
+      const fixed = replan.fixedStarts?.[id];
+      if (Number.isInteger(fixed)) domain = { earliest: fixed, latestStart: fixed, fixed: true };
+      else if (latestStart < nowSlot) domain = { earliest: SKIP, latestStart: SKIP };
+      else domain = { earliest: Math.max(earliest, nowSlot), latestStart };
+      if (preferred !== null) preferred = domain.earliest === SKIP ? null : clamp(preferred, domain.earliest, domain.latestStart);
+    }
     return {
-      id: a.id ?? `appliance-${i + 1}`,
+      ...domain,
+      originalEarliest: earliest,
+      id,
       name,
       powerW: positive(a.powerW, `appliances[${i}].powerW`),
       duration,
-      earliest,
-      latestStart,
       latestEnd,
       preferred,
       priority: priority(a.priority, `appliances[${i}].priority`),
@@ -64,7 +98,43 @@ export function buildModel(household) {
     ...appliances.map((l, index) => ({ kind: 'appliance', index, priority: l.priority })),
   ].sort((x, y) => y.priority - x.priority || (x.kind === y.kind ? 0 : x.kind === 'base' ? -1 : 1));
 
-  return { T, slotHours: SLOT_HOURS, gridMaxW, battery, plannedGrid, outages, baseLoads, appliances, loadOrder };
+  // Гени хромосоми: спочатку слоти запуску приладів, потім пороги запуску генераторів (0…20 або SKIP — не вмикати).
+  const genes = [
+    ...appliances.map((a) => ({ earliest: a.earliest, latestStart: a.latestStart, fixed: a.fixed })),
+    ...generators.map(() => ({ earliest: 0, latestStart: GENERATOR_THRESHOLD_GENES })),
+  ];
+
+  return { T, slotHours: SLOT_HOURS, startSlot: nowSlot, gridMaxW, battery, generators, solar, plannedGrid, outages, baseLoads, appliances, loadOrder, genes };
+}
+
+// Правило за замовчуванням для базових методів: вмикати генератор, коли заряд станції впав до 30%
+// (без станції — одразу на початку відключення).
+export const DEFAULT_GENERATOR_GENE = 30 / GENERATOR_THRESHOLD_STEP;
+
+// Доповнює план приладів генами генераторів (для методів, які генератором не керують).
+export function withGeneratorGenes(model, applianceStarts, gene = DEFAULT_GENERATOR_GENE) {
+  return [...applianceStarts.slice(0, model.appliances.length), ...model.generators.map(() => gene)];
+}
+
+// Сонячна генерація за слотами: синусоїда між сходом і заходом сонця, площа під якою дорівнює
+// денній енергії peakW · сонячні години · 0.75 (втрати); потужність не перевищує 0.75 · peakW.
+export const SOLAR_DERATE = 0.75;
+function buildSolar(panels, T) {
+  if (!panels.length) return null;
+  const profile = new Float64Array(T);
+  for (const p of panels) {
+    const peakW = Number(p.peakW) || 0;
+    const energyWh = peakW * (Number(p.sunHours) || 0) * SOLAR_DERATE;
+    const rise = p.sunrise ? timeToSlot(p.sunrise) * SLOT_HOURS : 7;
+    const set = p.sunset ? timeToSlot(p.sunset) * SLOT_HOURS : 18;
+    if (!(energyWh > 0) || set <= rise) continue;
+    const amplitude = (energyWh * Math.PI) / (2 * (set - rise));
+    for (let t = 0; t < T; t++) {
+      const h = (t + 0.5) * SLOT_HOURS;
+      if (h > rise && h < set) profile[t] += Math.min(peakW * SOLAR_DERATE, amplitude * Math.sin((Math.PI * (h - rise)) / (set - rise)));
+    }
+  }
+  return profile;
 }
 
 function buildBattery(b) {

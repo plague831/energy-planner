@@ -41,3 +41,25 @@ test('некоректні дані повертають помилку 400 з �
   assert.equal(res.status, 400);
   assert.match((await res.json()).error, /Некоректний час/);
 });
+
+test('перепланування з поточного моменту не ставить прилади в минуле', async () => {
+  const { household } = await (await fetch(`${url}/api/defaults`)).json();
+  const res = await fetch(`${url}/api/plan`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ household, algorithm: 'greedy', replan: { nowSlot: 48, fixedStarts: {}, socPct: 50 } }),
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.fromSlot, 48);
+  for (const s of body.schedule) if (!s.skipped) assert.ok(s.startSlot >= 48);
+});
+
+test('некоректний момент перепланування відхиляється', async () => {
+  const res = await fetch(`${url}/api/plan`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ household: {}, algorithm: 'greedy', replan: { nowSlot: 200 } }),
+  });
+  assert.equal(res.status, 400);
+});

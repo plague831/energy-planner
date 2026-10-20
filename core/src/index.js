@@ -1,13 +1,13 @@
 export * from './time.js';
 export { createRng } from './random.js';
-export { buildModel } from './model.js';
+export { buildModel, withGeneratorGenes, DEFAULT_GENERATOR_GENE, GENERATOR_THRESHOLD_STEP, SOLAR_DERATE } from './model.js';
 export { simulate, costOf, DEFAULT_WEIGHTS, SKIP } from './simulate.js';
 export { generateScenarios, DEFAULT_UNCERTAINTY } from './scenarios.js';
 export { robustCost, evaluatePlan, cvar, DEFAULT_RISK } from './robust.js';
 export { naivePlan } from './algorithms/naive.js';
 export { greedyPlan } from './algorithms/greedy.js';
 export { geneticPlan, DEFAULT_GA } from './algorithms/genetic.js';
-export { plan, solve, describeSchedule, ALGORITHMS } from './planner.js';
+export { plan, solve, describeSchedule, describeGenerators, ALGORITHMS } from './planner.js';
 export { batterySource, generatorSource, solarSource, estimateAutonomy } from './autonomy.js';
 export { exhaustivePlan } from './algorithms/exhaustive.js';
 export { mean, sd, ci95, normalCdf, wilcoxonSignedRank } from './stats.js';

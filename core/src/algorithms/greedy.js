@@ -1,10 +1,12 @@
 import { simulate, DEFAULT_WEIGHTS, SKIP } from '../simulate.js';
+import { withGeneratorGenes } from '../model.js';
 
 // Жадібний алгоритм: прилади розставляються по черзі (спочатку важливіші й потужніші),
 // кожному обирається час запуску, що найменше збільшує штраф за запланованим графіком.
 export function greedyPlan(model, { weights = DEFAULT_WEIGHTS, grid = model.plannedGrid } = {}) {
   const n = model.appliances.length;
-  const starts = new Array(n).fill(SKIP);
+  // Генератором жадібний алгоритм не керує: він працює за типовим правилом (поріг 30%).
+  const starts = withGeneratorGenes(model, new Array(n).fill(SKIP));
   const order = model.appliances
     .map((a, i) => i)
     .sort((i, j) => {
