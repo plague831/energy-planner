@@ -15,6 +15,10 @@
     "experiment": "node experiments/compare.js",
     "experiment:stats": "node experiments/statistical.js",
     "experiment:sensitivity": "node experiments/sensitivity.js",
-    "experiment:multisource": "node experiments/multisource.js"
+    "experiment:multisource": "node experiments/multisource.js",
+    "experiment:milp": "node experiments/milp.js"
+  },
+  "devDependencies": {
+    "highs": "^1.15.4"
   }
 }
