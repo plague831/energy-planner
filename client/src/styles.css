@@ -2040,3 +2040,14 @@ details.faq p {
   fill: var(--muted);
   font-size: 11px;
 }
+
+.forecast-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.forecast-row .link-button {
+  align-self: flex-start;
+}

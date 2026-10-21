@@ -110,7 +110,11 @@ function sum(loads) {
 
 // Сонячна потужність о певній хвилині доби: синусоїда між сходом і заходом сонця,
 // площа під якою дорівнює денній енергії peakW · sunHours · SOLAR_DERATE (як у моделі планувальника).
-export function solarPowerAt(panel, minuteOfDay, { sunrise = 7, sunset = 18 } = {}) {
+export function solarPowerAt(panel, minuteOfDay, defaults = {}) {
+  const hours = (t) => (typeof t === 'string' ? Number(t.slice(0, 2)) + Number(t.slice(3, 5)) / 60 : t);
+  // Схід і захід сонця з прогнозу погоди (якщо є), інакше 07:00–18:00.
+  const sunrise = hours(panel.sunrise ?? defaults.sunrise ?? 7);
+  const sunset = hours(panel.sunset ?? defaults.sunset ?? 18);
   const h = minuteOfDay / 60;
   if (h <= sunrise || h >= sunset) return 0;
   const energyWh = Number(panel.peakW) * Number(panel.sunHours) * SOLAR_DERATE;

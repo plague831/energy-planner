@@ -6,6 +6,7 @@ import { planDay as computePlan, lastSavedResult } from './planning.js';
 import { readEvents, addEvent, clearEvents, currentActual, applyActual } from './actual.js';
 import { readSettings, saveSettings, scheduleNotifications, requestPermission, testNotification } from './notifications.js';
 import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
+import { solarForecast } from './weather.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import Autonomy from './components/Autonomy.jsx';
@@ -141,14 +142,39 @@ export default function App() {
   // План на сьогодні будується з поточного моменту; якщо змінився графік, людина бачить, що саме перенесено.
   const day = planDay?.day ?? 'today';
 
+  // Прогноз сонця для панелей, у яких увімкнено «брати з прогнозу погоди».
+  const [forecasts, setForecasts] = useState({});
+  const forecastPlaces = (household?.sources ?? []).filter((s) => s.kind === 'solar' && s.forecast && s.lat).map((s) => `${s.lat},${s.lon}`);
+  useEffect(() => {
+    for (const place of new Set(forecastPlaces)) {
+      const [lat, lon] = place.split(',');
+      solarForecast(lat, lon)
+        .then((days) => setForecasts((f) => ({ ...f, [place]: days })))
+        .catch(() => {});
+    }
+  }, [forecastPlaces.join('|')]);
+
   // Фактичний стан світла, який повідомила людина, уточнює графік на сьогодні.
   const [actualEvents, setActualEvents] = useState(readEvents);
   const actual = currentActual(actualEvents);
   const { effectiveHousehold, actualNote } = useMemo(() => {
-    if (!household || day !== 'today') return { effectiveHousehold: household, actualNote: null };
-    const { outages, note } = applyActual(household.outages ?? [], actual);
-    return { effectiveHousehold: outages === household.outages ? household : { ...household, outages }, actualNote: note };
-  }, [household, day, actual]);
+    if (!household) return { effectiveHousehold: household, actualNote: null };
+    let h = household;
+    // Сонячні години з прогнозу на день плану замість введених вручну.
+    const date = localDate(day === 'tomorrow' ? 1 : 0);
+    if ((h.sources ?? []).some((s) => s.kind === 'solar' && s.forecast)) {
+      h = {
+        ...h,
+        sources: h.sources.map((s) => {
+          const f = s.kind === 'solar' && s.forecast ? forecasts[`${s.lat},${s.lon}`]?.[date] : null;
+          return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : s;
+        }),
+      };
+    }
+    if (day !== 'today') return { effectiveHousehold: h, actualNote: null };
+    const { outages, note } = applyActual(h.outages ?? [], actual);
+    return { effectiveHousehold: outages === h.outages ? h : { ...h, outages }, actualNote: note };
+  }, [household, day, actual, forecasts]);
 
   // Нагадування: перепланувати щоразу, як змінився план на сьогодні або налаштування.
   const [notifySettings, setNotifySettings] = useState(readSettings);
@@ -393,7 +419,7 @@ export default function App() {
             </div>
           </>
         )}
-        {route === 'backup' && <Autonomy household={household} />}
+        {route === 'backup' && <Autonomy household={effectiveHousehold} />}
         {route === 'details' && (
           <Details
             household={household}
