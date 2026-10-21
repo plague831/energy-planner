@@ -8,6 +8,6 @@ export { naivePlan } from './algorithms/naive.js';
 export { greedyPlan } from './algorithms/greedy.js';
 export { geneticPlan, DEFAULT_GA } from './algorithms/genetic.js';
 export { plan, solve, describeSchedule, describeGenerators, ALGORITHMS } from './planner.js';
-export { batterySource, generatorSource, solarSource, estimateAutonomy } from './autonomy.js';
+export { batterySource, generatorSource, solarSource, estimateAutonomy, simulateBackup, solarPowerAt } from './autonomy.js';
 export { exhaustivePlan } from './algorithms/exhaustive.js';
 export { mean, sd, ci95, normalCdf, wilcoxonSignedRank } from './stats.js';

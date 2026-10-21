@@ -1808,3 +1808,76 @@ details.faq p {
   border-radius: 2px;
   margin-right: 4px;
 }
+
+/* ---------- «Хто живитиме дім» ---------- */
+
+.backup-headline {
+  margin: 4px 0 10px;
+  font-size: 16px;
+}
+
+.backup-headline.bad {
+  color: var(--bad);
+}
+
+.phase-strip {
+  display: flex;
+  gap: 2px;
+  margin: 0 0 8px;
+}
+
+.phase-bar {
+  min-width: 2px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.phase-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.phase-list i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 8px;
+  vertical-align: -1px;
+}
+
+.phase-time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.phase-bar[data-none] {
+  background: repeating-linear-gradient(45deg, transparent 0 3px, var(--bad) 3px 5px);
+  opacity: 0.6;
+}
+
+
+.shortage-bar {
+  fill: url(#shortage-hatch);
+  stroke: var(--bad);
+  stroke-width: 1;
+}
+
+.shortage-line {
+  stroke: var(--bad);
+  stroke-width: 2;
+}
+
+.swatch-shortage {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  border: 1px solid var(--bad);
+  background: repeating-linear-gradient(45deg, transparent 0 2px, var(--bad) 2px 3px);
+}

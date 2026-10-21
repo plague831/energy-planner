@@ -51,3 +51,29 @@ test('дрібний споживач повертається, якщо піс�
   assert.deepEqual(r.drop.map((c) => c.name), ['Бойлер']);
   assert.deepEqual(r.keep.map((c) => c.name), ['Холодильник', 'Освітлення']);
 });
+
+test('імітація резерву: станція, потім генератор, потім нестача', async () => {
+  const { simulateBackup } = await import('../src/autonomy.js');
+  const r = simulateBackup({
+    batteries: [{ capacityWh: 1000, socPct: 100, minSocPct: 10, inverterMaxW: 1000 }],
+    generators: [{ ratedW: 1000, tankHoursAtHalf: 4, fuelPct: 50 }],
+    loadW: 450,
+    startMinute: 20 * 60,
+  });
+  // Станція: 1000 · 0.9 · 0.9 = 810 Вт·год на 450 Вт ≈ 1.8 год; генератор при 45% ≈ 2 · 0.625 / 0.5875 ≈ 2.13 год.
+  assert.equal(r.phases[0].kind, 'battery');
+  assert.equal(r.phases[1].kind, 'generator');
+  assert.equal(r.phases.at(-1).kind, 'none');
+  assert.ok(Math.abs(r.fullHours - 3.75) <= 0.25 + 1e-9);
+  const servedWh = r.steps.reduce((s, x) => s + (x.batteryW + x.generatorW) * 0.25, 0);
+  assert.ok(Math.abs(servedWh - 450 * (1.8 + 2.13)) < 450 * 0.15);
+});
+
+test('імітація резерву: удень сонце знімає навантаження зі станції', async () => {
+  const { simulateBackup } = await import('../src/autonomy.js');
+  const base = { batteries: [{ capacityWh: 1000, socPct: 100, minSocPct: 10, inverterMaxW: 1000 }], loadW: 300, startMinute: 9 * 60 };
+  const night = simulateBackup(base);
+  const sunny = simulateBackup({ ...base, solar: [{ peakW: 800, sunHours: 4 }] });
+  assert.ok((sunny.fullHours ?? 48) > night.fullHours);
+  assert.ok(sunny.steps.some((s) => s.solarW > 0));
+});

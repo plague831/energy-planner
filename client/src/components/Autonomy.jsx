@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { batterySource, generatorSource, solarSource, estimateAutonomy } from '@energy-planner/core/autonomy';
 import { appliancePresets, baseLoadPresets } from '../presets.js';
 import { SOURCE_KINDS } from '../sources.js';
-import { EnergyBreakdown, DischargeChart, clock, hoursText } from './AutonomyCharts.jsx';
+import { EnergyBreakdown, clock, hoursText } from './AutonomyCharts.jsx';
+import BackupTimeline from './BackupTimeline.jsx';
 
 const EXTRA_PRESETS = [...baseLoadPresets, ...appliancePresets];
 
@@ -149,7 +150,7 @@ export default function Autonomy({ household }) {
             ))}
           </div>
           <div className="autonomy-charts">
-            <DischargeChart series={dischargeSeries(estimate, selected)} />
+            <BackupTimeline sources={selected.map((x) => x.src)} consumers={consumers} />
             <EnergyBreakdown consumers={consumers} hours={estimate.sources.find((r) => r.kind !== 'solar' && !r.overloaded)?.hours} />
           </div>
         </>
@@ -160,19 +161,6 @@ export default function Autonomy({ household }) {
 
 // Скільки працює джерело на тих споживачах, які воно реально витягне (при перевантаженні — без зайвих).
 const runHours = (r) => (r.overloaded ? r.fitted?.hours : r.hours);
-
-function dischargeSeries(estimate, selected) {
-  return estimate.sources
-    .map((r, i) => ({ r, src: selected[i].src, color: selected[i].color }))
-    .filter(({ r }) => r.kind !== 'solar' && Number.isFinite(runHours(r)))
-    .map(({ r, src, color }) => ({
-      name: `${src.name} (${r.kind === 'battery' ? 'заряд' : 'пальне'})`,
-      color,
-      hours: runHours(r),
-      startPct: r.kind === 'battery' ? Number(src.initialSocPct ?? 100) : Number(src.fuelPct ?? 100),
-      endPct: r.kind === 'battery' ? Number(src.minSocPct ?? 10) : 0,
-    }));
-}
 
 function describeSource(s) {
   if (s.kind === 'battery') return `${fmt(s.capacityWh)} Вт·год, ${s.initialSocPct ?? 100}%`;
@@ -185,21 +173,16 @@ function Conclusion({ estimate }) {
   const now = new Date();
   const usable = estimate.sources.filter((r) => r.kind !== 'solar' && Number.isFinite(runHours(r)));
   if (!usable.length) return null;
-  const total = usable.reduce((s, r) => s + runHours(r), 0);
   const parts = usable.map((r) => `${r.name} — до ${clock(now, runHours(r))} (${hoursText(runHours(r))})`);
   return (
     <div className="conclusion">
-      <div className="conclusion-label">Якщо світло зникне зараз, о {now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div className="conclusion-label">Кожного джерела окремо вистачить, якщо світло зникне зараз, о {now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}</div>
       <div className="conclusion-main">
         {parts.map((p) => (
           <div key={p}>{p}</div>
         ))}
       </div>
-      {usable.length > 1 && total < 48 && (
-        <div className="conclusion-sub">
-          Якщо використовувати джерела по черзі, разом протримаєтесь {hoursText(total)}, до {clock(now, total)}.
-        </div>
-      )}
+      {usable.length > 1 && <div className="conclusion-sub">Це для кожного джерела окремо; як вони працюватимуть разом, показано на графіку нижче.</div>}
       {usable.some((r) => r.overloaded) && <div className="conclusion-sub">Для перевантажених джерел час указано без приладів, які доведеться вимкнути (див. нижче).</div>}
     </div>
   );
