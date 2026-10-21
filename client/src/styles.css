@@ -1892,3 +1892,203 @@ details.faq p {
 .balance-howto strong {
   color: var(--text);
 }
+
+.report-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.report-buttons button {
+  padding: 6px 12px;
+}
+
+.actual-note {
+  margin: 10px 0 0;
+  font-size: 14px;
+}
+
+.observations {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0 12px;
+  font-size: 14px;
+}
+
+.observations th,
+.observations td {
+  text-align: left;
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.observations th {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.prep-advice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--good);
+  background: color-mix(in srgb, var(--good) 10%, transparent);
+}
+
+.prep-advice.warn {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+
+.prep-detail {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.notify-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.notify-settings .hint {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+}
+
+.notify-before {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notify-before select {
+  height: 32px;
+}
+
+/* ---------- Енергія зараз ---------- */
+
+.power-flow svg {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.flow-line {
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.flow-line.active {
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-dasharray: 6 6;
+  animation: flow-dash 1s linear infinite;
+}
+
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-line.active {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+.flow-label {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+}
+
+.flow-node circle {
+  fill: var(--bg);
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.flow-node.off circle {
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
+}
+
+.flow-icon {
+  font-size: 20px;
+}
+
+.flow-caption {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.forecast-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.forecast-row .link-button {
+  align-self: flex-start;
+}
+
+.calendar-panel {
+  flex-basis: 100%;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.calendar-option .hint {
+  margin: 4px 0 8px;
+}
+
+.calendar-link {
+  width: 100%;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.history-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 10px;
+  text-transform: capitalize;
+}
+
+.balance-howto a {
+  color: var(--accent);
+}

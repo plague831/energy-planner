@@ -17,7 +17,8 @@
     "build": "npm run build --workspace client",
     "experiment:stats": "npm run experiment:stats --workspace core",
     "experiment:sensitivity": "npm run experiment:sensitivity --workspace core",
-    "experiment:multisource": "npm run experiment:multisource --workspace core"
+    "experiment:multisource": "npm run experiment:multisource --workspace core",
+    "experiment:milp": "npm run experiment:milp --workspace core"
   },
   "engines": {
     "node": ">=20.19"

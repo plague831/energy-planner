@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import ActionList from '../components/ActionList.jsx';
 import EnergyBalance from '../components/EnergyBalance.jsx';
+import PowerFlow from '../components/PowerFlow.jsx';
+import CalendarPanel from '../components/CalendarPanel.jsx';
 import { iconFor } from '../icons.js';
 
 const SLOT_MIN = 15;
@@ -16,7 +18,7 @@ const nowSlotOf = () => {
 
 // Головний екран для звичайного користувача: що зі світлом зараз, скільки до відключення,
 // що з зарядом станції і що робити далі. Усе технічне — у розділі «Детально».
-export default function Today({ household, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, onSetCharge, hasQueue, onSelectDay, onExportCalendar }) {
+export default function Today({ household, actual, actualNote, onReport, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, onSetCharge, hasQueue, onSelectDay, onExportCalendar, notifySettings, onNotifyChange }) {
   const [now, setNow] = useState(nowSlotOf);
   useEffect(() => {
     const id = setInterval(() => setNow(nowSlotOf()), 30_000);
@@ -64,7 +66,17 @@ export default function Today({ household, result, busy, planDay, scheduleNote, 
         </section>
       )}
 
-      {!isTomorrow && <PowerStatus household={household} result={result} now={now} onSetCharge={onSetCharge} />}
+      {!isTomorrow && <PowerStatus household={household} result={result} now={now} onSetCharge={onSetCharge} actual={actual} actualNote={actualNote} onReport={onReport} />}
+
+      {!isTomorrow && result && (
+        <PowerFlow
+          trace={result.nominal.trace}
+          slot={now}
+          household={household}
+          hasGenerator={(household.sources ?? []).some((s) => s.kind === 'generator')}
+          hasSolar={(household.sources ?? []).some((s) => s.kind === 'solar')}
+        />
+      )}
 
       <section className="card">
         <h2>
@@ -75,22 +87,93 @@ export default function Today({ household, result, busy, planDay, scheduleNote, 
           <p className="muted">{busy ? 'Складаю план…' : 'Додайте прилади в «Мій дім», і план з’явиться тут.'}</p>
         ) : (
           <>
+            <PrepAdvice household={household} result={result} now={isTomorrow ? 0 : now} />
             <NextStep result={result} now={isTomorrow ? -1 : now} />
             <GeneratorRules generators={result.generators ?? []} />
             <ActionList result={result} household={household} isToday={!isTomorrow} />
             <div className="plan-actions no-print">
-              <button type="button" className="secondary" onClick={onExportCalendar}>
-                🔔 Нагадування в календар
-              </button>
+              <CalendarPanel household={household} onDownload={onExportCalendar} />
               <button type="button" className="secondary" onClick={() => window.print()}>
                 🖨️ Друкувати
               </button>
             </div>
+            {!isTomorrow && notifySettings && <NotifySettings settings={notifySettings} onChange={onNotifyChange} />}
           </>
         )}
       </section>
 
       {result && <EnergyBalance result={result} />}
+    </div>
+  );
+}
+
+// Порада перед найближчим відключенням (як «Storm Guard» у застосунках станцій):
+// до якого рівня має бути заряджена станція і чи вистачить її на все відключення.
+function PrepAdvice({ household, result, now }) {
+  const capacity = household.battery?.capacityWh;
+  const trace = result.nominal.trace;
+  if (!capacity || !trace?.length) return null;
+  const start = Math.ceil(now);
+  // Найближче відключення в плані, яке ще не почалось.
+  let from = -1;
+  for (let t = Math.max(1, start); t < trace.length; t++) {
+    if (!trace[t].gridOn && trace[t - 1].gridOn) {
+      from = t;
+      break;
+    }
+  }
+  if (from === -1) return null;
+  let to = from;
+  while (to < trace.length && !trace[to].gridOn) to++;
+  const pct = (wh) => Math.round((wh / capacity) * 100);
+  const needed = pct(trace[from - 1].energyWh);
+  const lowest = Math.min(...trace.slice(from, to).map((t) => t.energyWh));
+  const shortage = trace.slice(from, to).some((t) => t.servedW + 1 < t.demandW);
+  const minSoc = household.battery.minSocPct ?? 10;
+  const charging = trace.slice(start, from).some((t) => t.chargeW > 0);
+  return (
+    <div className={`prep-advice ${shortage ? 'warn' : ''}`}>
+      <span className="next-icon" aria-hidden="true">
+        🔋
+      </span>
+      <div>
+        <div className="next-label">
+          Підготовка до відключення о {slotTime(from)}–{slotTime(to)}
+        </div>
+        <div className="next-title">
+          {needed >= 99 ? 'Зарядіть станцію повністю' : `Зарядіть станцію щонайменше до ${needed}%`} до {slotTime(from)}
+        </div>
+        <div className="prep-detail">
+          {charging ? 'Тримайте її на зарядці, поки є світло. ' : ''}
+          {shortage
+            ? `Навіть так енергії на все відключення не вистачить: заряд впаде до ${minSoc}%, і частину приладів доведеться вимкнути.`
+            : `За планом під час відключення заряд опуститься до ${pct(lowest)}%, тож запасу вистачить.`}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotifySettings({ settings, onChange }) {
+  return (
+    <div className="notify-settings no-print">
+      <label className="checkbox">
+        <input type="checkbox" checked={settings.enabled} onChange={(e) => onChange({ ...settings, enabled: e.target.checked })} />
+        🔔 Нагадувати про відключення і дії з плану
+      </label>
+      {settings.enabled && (
+        <label className="notify-before">
+          за
+          <select value={settings.minutesBefore} onChange={(e) => onChange({ ...settings, minutesBefore: Number(e.target.value) })}>
+            {[0, 5, 15, 30, 60].map((m) => (
+              <option key={m} value={m}>
+                {m === 0 ? 'у момент події' : `${m} хв`}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {settings.enabled && <p className="hint">Сповіщення приходять, поки сайт відкритий (можна у фоновій вкладці або як встановлений застосунок).</p>}
     </div>
   );
 }
@@ -113,7 +196,7 @@ function GeneratorRules({ generators }) {
   );
 }
 
-function PowerStatus({ household, result, now, onSetCharge }) {
+function PowerStatus({ household, result, now, onSetCharge, actual, actualNote, onReport }) {
   const outages = (household.outages ?? []).map((o) => {
     const from = toSlot(o.from);
     let to = toSlot(o.to);
@@ -135,7 +218,15 @@ function PowerStatus({ household, result, now, onSetCharge }) {
           {current ? '🌑' : '💡'}
         </span>
         <div>
-          <div className="status-title">{current ? 'Зараз відключення за графіком' : 'Зараз світло є'}</div>
+          <div className="status-title">
+            {current
+              ? actual?.type === 'off'
+                ? `Зараз світла немає (ви повідомили о ${actual.time})`
+                : 'Зараз відключення за графіком'
+              : actual?.type === 'on'
+                ? `Зараз світло є (повернулось о ${actual.time})`
+                : 'Зараз світло є'}
+          </div>
           <div className="status-sub">
             {current
               ? `Світло має повернутися о ${slotTime(current.to)} (через ${until(current.to - inside(current))})`
@@ -155,6 +246,19 @@ function PowerStatus({ household, result, now, onSetCharge }) {
           </span>
         </div>
       )}
+      {actualNote && <p className="actual-note">{actualNote}</p>}
+      <div className="report-buttons">
+        <span className="muted">Насправді інакше?</span>
+        {current ? (
+          <button type="button" className="secondary" onClick={() => onReport('on')}>
+            💡 Світло вже є
+          </button>
+        ) : (
+          <button type="button" className="secondary" onClick={() => onReport('off')}>
+            🌑 Світла немає
+          </button>
+        )}
+      </div>
       {capacity && <ChargeCorrection onSetCharge={onSetCharge} />}
     </section>
   );

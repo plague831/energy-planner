@@ -7,13 +7,18 @@
   "exports": {
     ".": "./src/index.js",
     "./examples": "./examples/demo-household.js",
-    "./autonomy": "./src/autonomy.js"
+    "./autonomy": "./src/autonomy.js",
+    "./ics": "./src/ics.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js",
     "experiment": "node experiments/compare.js",
     "experiment:stats": "node experiments/statistical.js",
     "experiment:sensitivity": "node experiments/sensitivity.js",
-    "experiment:multisource": "node experiments/multisource.js"
+    "experiment:multisource": "node experiments/multisource.js",
+    "experiment:milp": "node experiments/milp.js"
+  },
+  "devDependencies": {
+    "highs": "^1.15.4"
   }
 }

@@ -11,3 +11,8 @@ createRoot(document.getElementById('root')).render(
     </ToastProvider>
   </StrictMode>,
 );
+
+// Service worker працює лише в безпечному контексті (https або localhost).
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}

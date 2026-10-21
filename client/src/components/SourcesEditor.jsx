@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { SOURCE_KINDS, newSource } from '../sources.js';
 import { stationPresets } from '../presets.js';
+import { CITIES, solarForecast } from '../weather.js';
 import { useToast } from './Toasts.jsx';
 
 // Список джерел живлення в «Мій дім»: кожне — картка з основними полями, технічні параметри станції розгортаються.
@@ -78,10 +80,56 @@ export default function SourcesEditor({ sources, onChange }) {
           )}
 
           {s.kind === 'solar' && (
-            <div className="grid-fields">
-              <Num label="Потужність панелей, Вт" value={s.peakW} onChange={(v) => update(s.id, { peakW: v })} />
-              <Num label="Сонячних годин за день" value={s.sunHours} step={0.5} onChange={(v) => update(s.id, { sunHours: v })} />
-            </div>
+            <>
+              <div className="grid-fields">
+                <Num label="Потужність панелей, Вт" value={s.peakW} onChange={(v) => update(s.id, { peakW: v })} />
+                {!s.forecast && <Num label="Сонячних годин за день" value={s.sunHours} step={0.5} onChange={(v) => update(s.id, { sunHours: v })} />}
+                {s.forecast && (
+                  <label className="field">
+                    <span>Місто для прогнозу</span>
+                    <select
+                      value={CITIES.findIndex((c) => c.name === s.place)}
+                      onChange={(e) => {
+                        const c = CITIES[Number(e.target.value)];
+                        if (c) update(s.id, { place: c.name, lat: c.lat, lon: c.lon });
+                      }}
+                    >
+                      {CITIES.findIndex((c) => c.name === s.place) === -1 && <option value={-1}>{s.place ?? 'Оберіть місто'}</option>}
+                      {CITIES.map((c, i) => (
+                        <option key={c.name} value={i}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={Boolean(s.forecast)}
+                  onChange={(e) => update(s.id, e.target.checked ? { forecast: true, ...(s.lat ? {} : { place: CITIES[0].name, lat: CITIES[0].lat, lon: CITIES[0].lon }) } : { forecast: false })}
+                />
+                Брати сонячні години з прогнозу погоди (Open-Meteo)
+              </label>
+              {s.forecast && (
+                <div className="forecast-row">
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() =>
+                      navigator.geolocation?.getCurrentPosition(
+                        (p) => update(s.id, { place: 'Моє місцезнаходження', lat: Math.round(p.coords.latitude * 100) / 100, lon: Math.round(p.coords.longitude * 100) / 100 }),
+                        () => notify('error', 'Не вдалося визначити місцезнаходження'),
+                      )
+                    }
+                  >
+                    📍 Визначити моє місцезнаходження
+                  </button>
+                  <ForecastPreview lat={s.lat} lon={s.lon} />
+                </div>
+              )}
+            </>
           )}
         </div>
       ))}
@@ -108,4 +156,25 @@ function Num({ label, value, onChange, step = 1 }) {
       <input type="number" min={0} step={step} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
     </label>
   );
+}
+
+function ForecastPreview({ lat, lon }) {
+  const [days, setDays] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!lat || !lon) return;
+    let cancelled = false;
+    setFailed(false);
+    solarForecast(lat, lon)
+      .then((d) => !cancelled && setDays(d))
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, [lat, lon]);
+  if (failed) return <span className="muted">Прогноз зараз недоступний, використовую 3 сонячні години.</span>;
+  if (!days) return <span className="muted">Завантажую прогноз…</span>;
+  const [today, tomorrow] = Object.values(days);
+  const line = (label, d) => d && `${label}: ≈ ${String(d.sunHours).replace('.', ',')} сонячної год, хмарність ${d.cloudPct}%`;
+  return <span className="muted">{[line('сьогодні', today), line('завтра', tomorrow)].filter(Boolean).join('; ')}</span>;
 }
