@@ -1930,3 +1930,25 @@ details.faq p {
   font-size: 12px;
   color: var(--muted);
 }
+
+.prep-advice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--good);
+  background: color-mix(in srgb, var(--good) 10%, transparent);
+}
+
+.prep-advice.warn {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
+}
+
+.prep-detail {
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--muted);
+}

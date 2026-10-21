@@ -75,6 +75,7 @@ export default function Today({ household, actual, actualNote, onReport, result,
           <p className="muted">{busy ? 'Складаю план…' : 'Додайте прилади в «Мій дім», і план з’явиться тут.'}</p>
         ) : (
           <>
+            <PrepAdvice household={household} result={result} now={isTomorrow ? 0 : now} />
             <NextStep result={result} now={isTomorrow ? -1 : now} />
             <GeneratorRules generators={result.generators ?? []} />
             <ActionList result={result} household={household} isToday={!isTomorrow} />
@@ -91,6 +92,53 @@ export default function Today({ household, actual, actualNote, onReport, result,
       </section>
 
       {result && <EnergyBalance result={result} />}
+    </div>
+  );
+}
+
+// Порада перед найближчим відключенням (як «Storm Guard» у застосунках станцій):
+// до якого рівня має бути заряджена станція і чи вистачить її на все відключення.
+function PrepAdvice({ household, result, now }) {
+  const capacity = household.battery?.capacityWh;
+  const trace = result.nominal.trace;
+  if (!capacity || !trace?.length) return null;
+  const start = Math.ceil(now);
+  // Найближче відключення в плані, яке ще не почалось.
+  let from = -1;
+  for (let t = Math.max(1, start); t < trace.length; t++) {
+    if (!trace[t].gridOn && trace[t - 1].gridOn) {
+      from = t;
+      break;
+    }
+  }
+  if (from === -1) return null;
+  let to = from;
+  while (to < trace.length && !trace[to].gridOn) to++;
+  const pct = (wh) => Math.round((wh / capacity) * 100);
+  const needed = pct(trace[from - 1].energyWh);
+  const lowest = Math.min(...trace.slice(from, to).map((t) => t.energyWh));
+  const shortage = trace.slice(from, to).some((t) => t.servedW + 1 < t.demandW);
+  const minSoc = household.battery.minSocPct ?? 10;
+  const charging = trace.slice(start, from).some((t) => t.chargeW > 0);
+  return (
+    <div className={`prep-advice ${shortage ? 'warn' : ''}`}>
+      <span className="next-icon" aria-hidden="true">
+        🔋
+      </span>
+      <div>
+        <div className="next-label">
+          Підготовка до відключення о {slotTime(from)}–{slotTime(to)}
+        </div>
+        <div className="next-title">
+          {needed >= 99 ? 'Зарядіть станцію повністю' : `Зарядіть станцію щонайменше до ${needed}%`} до {slotTime(from)}
+        </div>
+        <div className="prep-detail">
+          {charging ? 'Тримайте її на зарядці, поки є світло. ' : ''}
+          {shortage
+            ? `Навіть так енергії на все відключення не вистачить: заряд впаде до ${minSoc}%, і частину приладів доведеться вимкнути.`
+            : `За планом під час відключення заряд опуститься до ${pct(lowest)}%, тож запасу вистачить.`}
+        </div>
+      </div>
     </div>
   );
 }
