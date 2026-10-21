@@ -32,9 +32,14 @@ export function generateScenarios(model, { count = 100, seed = 1, ...params } = 
       const newLength = Math.max(1, length + endShift - startShift);
       cut(grid, from, newLength);
     }
-    if (rng.chance(u.extraProb)) {
-      const length = rng.int(Math.round(u.extraMinMin / SLOT_MINUTES), Math.round(u.extraMaxMin / SLOT_MINUTES));
-      cut(grid, rng.int(0, T - 1), length);
+    // Позапланове відключення — з ймовірністю extraProb на кожну добу горизонту.
+    const days = model.days ?? 1;
+    for (let d = 0; d < days; d++) {
+      if (rng.chance(u.extraProb)) {
+        const length = rng.int(Math.round(u.extraMinMin / SLOT_MINUTES), Math.round(u.extraMaxMin / SLOT_MINUTES));
+        const dayLen = T / days;
+        cut(grid, d * dayLen + rng.int(0, dayLen - 1), length);
+      }
     }
     scenarios.push(grid);
   }

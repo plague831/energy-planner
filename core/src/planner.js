@@ -80,15 +80,20 @@ export function plan(household, options = {}) {
 export function describeSchedule(model, starts) {
   return model.appliances.map((a, i) => {
     const s = starts[i];
-    if (s === SKIP) return { id: a.id, name: a.name, skipped: true, missed: Boolean(a.missed) };
+    const day = a.day ?? 0;
+    if (s === SKIP) return { id: a.id, baseId: a.baseId ?? a.id, day, name: a.name, skipped: true, missed: Boolean(a.missed) };
+    const DAY = 96;
+    const end = s + a.duration;
     return {
       id: a.id,
+      baseId: a.baseId ?? a.id,
+      day,
       name: a.name,
       skipped: false,
       startSlot: s,
-      endSlot: s + a.duration,
-      start: slotToTime(s),
-      end: slotToTime(s + a.duration),
+      endSlot: end,
+      start: slotToTime(s % DAY),
+      end: end % DAY === 0 && end > 0 ? '24:00' : slotToTime(end % DAY),
     };
   });
 }

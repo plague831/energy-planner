@@ -35,16 +35,16 @@ const enteredState = (h) => JSON.stringify((h.sources ?? []).map((s) => [s.id, s
 
 // scheduleOutages — опублікований графік (без уточнень від людини), щоб «графік змінився» спрацьовувало
 // лише на зміну графіка, а не на кнопки «світло зникло / повернулось».
+// План завжди будується на 48 год від поточного моменту (household.nextDay — дані на завтра),
+// тож заряд станції ввечері враховує завтрашній ранок. Повертається зріз на потрібну добу.
 export async function planDay(household, algorithm, { day = 'today', scheduleOutages } = {}) {
   const scheduleKey = JSON.stringify(scheduleOutages ?? household.outages ?? []);
-  if (day === 'tomorrow') return { result: await buildPlan(household, algorithm), changed: null };
-
   const nowSlot = currentSlot();
   const prev = readLastPlan();
   const ids = new Set((household.appliances ?? []).map((a) => a.id));
   const fixedStarts = {};
   for (const s of prev?.schedule ?? []) {
-    if (!s.skipped && s.startSlot < nowSlot && ids.has(s.id)) fixedStarts[s.id] = s.startSlot;
+    if (!s.skipped && (s.day ?? 0) === 0 && s.startSlot < nowSlot && ids.has(s.id)) fixedStarts[s.id] = s.startSlot;
   }
   const sameInputs = prev && prev.entered === enteredState(household);
   const replan = {
@@ -55,27 +55,49 @@ export async function planDay(household, algorithm, { day = 'today', scheduleOut
       ? Object.fromEntries((household.sources ?? []).filter((s) => s.kind === 'generator').map((g) => [g.id, prev.fuelBySlot[nowSlot]]))
       : undefined,
   };
-  // Якщо попереднього плану на сьогодні немає, минулі години доби беруться з плану на всю добу,
+  // Якщо попереднього плану на сьогодні немає, минулі години доби беруться з плану на весь горизонт,
   // щоб діаграма й енергобаланс показували всю добу, а не лише решту.
   const needPast = nowSlot > 0 && !(prev?.trace?.length >= nowSlot);
   const [fresh, fullDay] = await Promise.all([buildPlan(household, algorithm, replan), needPast ? buildPlan(household, algorithm).catch(() => null) : null]);
-  const result = mergeWithPast(fresh, fullDay ? { trace: fullDay.nominal.trace } : prev, household);
+  const full = mergeWithPast(fresh, fullDay ? { trace: fullDay.nominal.trace } : prev, household);
 
   // Що змінилось порівняно з попереднім планом, коли змінився графік відключень.
-  const changed = prev && prev.outages !== scheduleKey ? describeChanges(prev.schedule, result.schedule, nowSlot) : null;
+  const changed = prev && prev.outages !== scheduleKey ? describeChanges(prev.schedule.filter((s) => (s.day ?? 0) === 0), sliceDay(full, 0).schedule, nowSlot) : null;
 
   const capacity = household.battery?.capacityWh;
   saveLastPlan({
     date: localDate(0),
     entered: enteredState(household),
     outages: scheduleKey,
-    schedule: result.schedule,
-    socBySlot: capacity ? result.nominal.trace.map((t) => (t.energyWh / capacity) * 100) : [],
-    fuelBySlot: result.nominal.trace.map((t) => t.fuelPct),
-    trace: result.nominal.trace,
-    result,
+    schedule: full.schedule,
+    socBySlot: capacity ? full.nominal.trace.map((t) => (t.energyWh / capacity) * 100) : [],
+    fuelBySlot: full.nominal.trace.map((t) => t.fuelPct),
+    trace: full.nominal.trace,
+    result: full,
   });
-  return { result, changed };
+  return { result: sliceDay(full, day === 'tomorrow' ? 1 : 0), changed };
+}
+
+// Зріз 48-годинного плану на одну добу: слоти й ідентифікатори приладів — як у плані на одну добу.
+export function sliceDay(result, d) {
+  const trace = result.nominal.trace;
+  if (trace.length <= T) return d === 0 ? result : null;
+  const from = d * T;
+  const strip = (id) => String(id).replace(/@\d+$/, '');
+  const dayIds = new Set(result.schedule.filter((x) => (x.day ?? 0) === d).map((x) => x.id));
+  return {
+    ...result,
+    fromSlot: Math.max(0, (result.fromSlot ?? 0) - from),
+    schedule: result.schedule
+      .filter((x) => (x.day ?? 0) === d)
+      .map((x) => ({ ...x, id: strip(x.id), ...(x.skipped ? {} : { startSlot: x.startSlot - from, endSlot: x.endSlot - from }) })),
+    nominal: {
+      ...result.nominal,
+      trace: trace.slice(from, from + T).map((t) => ({ ...t, slot: t.slot - from })),
+      failedIds: (result.nominal.failedIds ?? []).filter((id) => dayIds.has(id)).map(strip),
+      missedIds: (result.nominal.missedIds ?? []).filter((id) => dayIds.has(id)).map(strip),
+    },
+  };
 }
 
 // Розрахунок починається з «зараз», тож минулі слоти доби беруться з попереднього плану,
@@ -122,6 +144,6 @@ function describeChanges(before, after, nowSlot) {
 
 // Останній збережений план на сьогодні — для роботи без зв'язку з сервером.
 export function lastSavedResult(day = 'today') {
-  if (day !== 'today') return null;
-  return readLastPlan()?.result ?? null;
+  const saved = readLastPlan()?.result;
+  return saved ? sliceDay(saved, day === 'tomorrow' ? 1 : 0) : null;
 }

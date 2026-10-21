@@ -123,3 +123,26 @@ test('прилад, вікно якого минуло до перепланув
   assert.deepEqual(result.nominal.missedIds, ['kettle']);
   assert.equal(result.schedule[0].missed, true);
 });
+
+test('план на 48 год: дві доби, копії приладів і відключення завтра', () => {
+  const household = {
+    grid: { maxPowerW: 5000 },
+    battery: { capacityWh: 1000, initialSocPct: 50, minSocPct: 10, targetEndSocPct: 20, maxChargeW: 500, inverterMaxW: 1500 },
+    outages: [{ from: '18:00', to: '22:00' }],
+    nextDay: { outages: [{ from: '22:00', to: '02:00' }] },
+    baseLoads: [{ id: 'fridge', name: 'Холодильник', powerW: 100, priority: 5 }],
+    appliances: [{ id: 'kettle', name: 'Чайник', powerW: 1800, durationMin: 15, earliest: '07:00', latest: '09:00', priority: 3 }],
+  };
+  const model = buildModel(household);
+  assert.equal(model.T, 192);
+  assert.equal(model.appliances.length, 2);
+  assert.equal(model.appliances[1].id, 'kettle@2');
+  assert.equal(model.plannedGrid[timeToSlot('19:00')], 0);
+  assert.equal(model.plannedGrid[96 + timeToSlot('23:00')], 0);
+  assert.equal(model.plannedGrid[96 + timeToSlot('12:00')], 1);
+  const result = plan(household, { algorithm: 'greedy', testScenarios: 20 });
+  assert.equal(result.nominal.trace.length, 192);
+  const tomorrowKettle = result.schedule.find((s) => s.id === 'kettle@2');
+  assert.equal(tomorrowKettle.day, 1);
+  assert.ok(tomorrowKettle.startSlot >= 96);
+});

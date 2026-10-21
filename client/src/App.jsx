@@ -105,15 +105,23 @@ export default function App() {
     if (household) storage.set(STORAGE_KEY, JSON.stringify(household));
   }, [household]);
 
-  // Графік з YASNO підставляється в дані; якщо графік не діє (аварійні відключення, ще не опублікований), лишається попередній.
-  const applyDay = (day) => {
-    setPlanDay({ day: day.day, date: day.date });
-    if (day.applies) {
-      setHousehold((h) => ({ ...h, outages: day.outages, possibleOutages: day.possible ?? [] }));
-      setScheduleNote(null);
-    } else {
-      setScheduleNote(`Черга ${day.group}: ${day.statusText.charAt(0).toLowerCase()}${day.statusText.slice(1)}. План складено за останнім відомим графіком.`);
-    }
+  // Графік з YASNO на сьогодні й завтра підставляється в дані; якщо графік не діє
+  // (аварійні відключення, ще не опублікований), лишається попередній відомий.
+  const applyDays = ({ today, tomorrow }, viewDay) => {
+    setPlanDay({ day: viewDay, date: (viewDay === 'tomorrow' ? tomorrow : today)?.date });
+    setHousehold((h) => ({
+      ...h,
+      ...(today?.applies ? { outages: today.outages, possibleOutages: today.possible ?? [] } : {}),
+      outagesTomorrow: tomorrow?.applies ? tomorrow.outages : null,
+    }));
+    const shown = viewDay === 'tomorrow' ? tomorrow : today;
+    if (shown && !shown.applies) {
+      setScheduleNote(
+        viewDay === 'tomorrow' && shown.status === 'WaitingForSchedule'
+          ? `Черга ${shown.group}: графік на завтра ще не опубліковано. Для розрахунку взято сьогоднішній графік.`
+          : `Черга ${shown.group}: ${shown.statusText.charAt(0).toLowerCase()}${shown.statusText.slice(1)}. План складено за останнім відомим графіком.`,
+      );
+    } else setScheduleNote(null);
   };
 
   const loadSchedule = async (day = 'today', { silent = false } = {}) => {
@@ -123,7 +131,8 @@ export default function App() {
       return;
     }
     try {
-      applyDay(await loadDay({ ...choice, day }));
+      const [today, tomorrow] = await Promise.all([loadDay({ ...choice, day: 'today' }), loadDay({ ...choice, day: 'tomorrow' }).catch(() => null)]);
+      applyDays({ today, tomorrow }, day);
     } catch {
       if (!silent) notify('error', 'Не вдалося оновити графік з YASNO, показую останній відомий');
       setPlanDay({ day });
@@ -159,22 +168,22 @@ export default function App() {
   const actual = currentActual(actualEvents);
   const { effectiveHousehold, actualNote } = useMemo(() => {
     if (!household) return { effectiveHousehold: household, actualNote: null };
-    let h = household;
-    // Сонячні години з прогнозу на день плану замість введених вручну.
-    const date = localDate(day === 'tomorrow' ? 1 : 0);
-    if ((h.sources ?? []).some((s) => s.kind === 'solar' && s.forecast)) {
-      h = {
-        ...h,
-        sources: h.sources.map((s) => {
-          const f = s.kind === 'solar' && s.forecast ? forecasts[`${s.lat},${s.lon}`]?.[date] : null;
-          return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : s;
-        }),
-      };
-    }
-    if (day !== 'today') return { effectiveHousehold: h, actualNote: null };
-    const { outages, note } = applyActual(h.outages ?? [], actual);
-    return { effectiveHousehold: outages === h.outages ? h : { ...h, outages }, actualNote: note };
-  }, [household, day, actual, forecasts]);
+    // Сонячні години з прогнозу на конкретну добу замість введених вручну.
+    const withForecast = (sources, offset) =>
+      (sources ?? []).map((s) => {
+        const f = s.kind === 'solar' && s.forecast ? forecasts[`${s.lat},${s.lon}`]?.[localDate(offset)] : null;
+        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : s;
+      });
+    const { outages, note } = applyActual(household.outages ?? [], actual);
+    // План завжди на 48 год (сьогодні + завтра): якщо графік на завтра невідомий, береться сьогоднішній.
+    const h = {
+      ...household,
+      outages,
+      sources: withForecast(household.sources, 0),
+      nextDay: { outages: household.outagesTomorrow ?? household.outages ?? [], sources: withForecast(household.sources, 1) },
+    };
+    return { effectiveHousehold: h, actualNote: note };
+  }, [household, actual, forecasts]);
 
   // Нагадування: перепланувати щоразу, як змінився план на сьогодні або налаштування.
   const [notifySettings, setNotifySettings] = useState(readSettings);
@@ -248,8 +257,9 @@ export default function App() {
     setScheduleNote(null);
     setHasQueue(true);
     // Завантаження графіка — окрема явна дія, тож він застосовується одразу (і в чернетку, якщо вона є).
-    setHousehold((h) => ({ ...h, outages, possibleOutages: meta.possible ?? [] }));
-    setDraft((d) => (d ? { ...d, outages, possibleOutages: meta.possible ?? [] } : d));
+    const patch = meta.day === 'tomorrow' ? { outagesTomorrow: outages } : { outages, possibleOutages: meta.possible ?? [] };
+    setHousehold((h) => ({ ...h, ...patch }));
+    setDraft((d) => (d ? { ...d, ...patch } : d));
   };
 
   const editDraft = (next) => setDraft(JSON.stringify(next) === JSON.stringify(household) ? null : next);
