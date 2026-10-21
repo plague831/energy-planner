@@ -28,23 +28,28 @@ export default function BackupTimeline({ sources, consumers }) {
   if (!loadW || !sim.steps.length) return null;
 
   // Години від «зараз»: по 4 кроки по 15 хв.
+  // Стовпчик охоплює 1, 2, 3 або 4 години, щоб їх було не більше ~16 і графік не перетворювався на «частокіл».
+  const totalHours = sim.steps.length / 4;
+  const span = [1, 2, 3, 4, 6].find((n) => totalHours / n <= 16) ?? 6;
+  const perBar = span * 4;
   const hours = [];
-  for (let i = 0; i < sim.steps.length; i += 4) {
-    const chunk = sim.steps.slice(i, i + 4);
-    const sum = (k) => chunk.reduce((s, x) => s + x[k] * 0.25, 0);
+  for (let i = 0; i < sim.steps.length; i += perBar) {
+    const chunk = sim.steps.slice(i, i + perBar);
+    // Середня частка потреби за період: сума енергії / тривалість, тобто середня потужність.
+    const avg = (k) => chunk.reduce((s, x) => s + x[k], 0) / chunk.length;
     const lastStep = chunk.at(-1);
-    hours.push({ offset: i / 4, solarW: sum('solarW'), batteryW: sum('batteryW'), generatorW: sum('generatorW'), shortageW: sum('shortageW'), socPct: lastStep.socPct, fuelPct: lastStep.fuelPct });
+    hours.push({ offset: i / 4, span: chunk.length / 4, solarW: avg('solarW'), batteryW: avg('batteryW'), generatorW: avg('generatorW'), shortageW: avg('shortageW'), socPct: lastStep.socPct, fuelPct: lastStep.fuelPct });
   }
 
   const W = 640;
-  const H = 230;
+  const H = 150;
   const M = { top: 12, right: 8, bottom: 26, left: 40 };
   const plotH = H - M.top - M.bottom;
   const band = (W - M.left - M.right) / hours.length;
-  const barW = Math.max(3, band - Math.min(6, band * 0.3));
+  const barW = Math.max(3, band - Math.min(4, band * 0.2));
   const top = loadW; // кожна година — це повне навантаження: живлення від джерел плюс нестача
   const y = (wh) => (wh / top) * plotH;
-  const labelEvery = Math.ceil(hours.length / 8);
+  const labelEvery = Math.ceil(hours.length / 6);
   const shownFlows = FLOWS.filter((f) => hours.some((h) => h[f.key] > 0.5));
   const hasShortage = hours.some((h) => h.shortageW > 0.5);
 
@@ -53,16 +58,6 @@ export default function BackupTimeline({ sources, consumers }) {
       <h3>Хто живитиме дім, якщо світло зникне зараз</h3>
       <Headline sim={sim} now={now} consumers={consumers} />
 
-      <div className="phase-strip" aria-hidden="true">
-        {sim.phases.map((p) => (
-          <span
-            key={p.fromHour}
-            className="phase-bar"
-            style={{ flexGrow: p.toHour - p.fromHour, background: p.kind === 'none' ? undefined : `var(${PHASE_COLOR[p.kind]})` }}
-            data-none={p.kind === 'none' || undefined}
-          />
-        ))}
-      </div>
       <ol className="phase-list">
         {sim.phases.map((p) => (
           <li key={p.fromHour}>
@@ -109,7 +104,7 @@ export default function BackupTimeline({ sources, consumers }) {
               <line x1="0" y1="0" x2="0" y2="6" className="shortage-line" />
             </pattern>
           </defs>
-          {[0, 0.5, 1].map((f) => (
+          {[0, 1].map((f) => (
             <g key={f}>
               <line className={f === 0 ? 'chart-base' : 'chart-grid'} x1={M.left} x2={W - M.right} y1={M.top + plotH - f * plotH} y2={M.top + plotH - f * plotH} />
               <text className="chart-tick" x={M.left - 6} y={M.top + plotH - f * plotH + 4} textAnchor="end">
@@ -153,7 +148,7 @@ export default function BackupTimeline({ sources, consumers }) {
         {hover !== null && (
           <div className="chart-tooltip" style={{ left: `${((M.left + (hover + 0.5) * band) / W) * 100}%` }}>
             <div className="chart-tooltip-time">
-              {clock(now, hours[hover].offset)}–{clock(now, hours[hover].offset + 1)}
+              {clock(now, hours[hover].offset)}–{clock(now, hours[hover].offset + hours[hover].span)}
             </div>
             {FLOWS.map((f) =>
               hours[hover][f.key] > 0.5 ? (
@@ -177,7 +172,7 @@ export default function BackupTimeline({ sources, consumers }) {
         )}
       </div>
       <p className="hint chart-caption">
-        Кожен стовпчик — одна година. Висота 100% — уся потреба вибраних приладів ({loadW.toLocaleString('uk-UA')} Вт); колір показує, яке джерело її покриває, а штриховка — частку, на яку енергії не вистачає.
+        Стовпчик — {span === 1 ? 'година' : `${span} год`}, висота — уся потреба вибраних приладів ({loadW.toLocaleString('uk-UA')} Вт). Колір — яке джерело її покриває, штриховка — скільки не вистачає.
       </p>
     </div>
   );

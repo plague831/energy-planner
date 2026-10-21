@@ -70,7 +70,19 @@ export default function EnergyBalance({ result }) {
   return (
     <section className="card energy-balance">
       <h2>Енергобаланс доби</h2>
-      <p className="hint">За розрахунком плану: над нулем — звідки береться енергія, під нулем — куди вона йде; години, що вже минули, бліді. Шкала в кВт·год; наведіть на годину, щоб побачити деталі.</p>
+      <p className="hint">
+        Звідки ваш дім братиме електроенергію протягом доби і на що вона піде, якщо дотримуватися плану. Тут видно, коли станція заряджається від мережі, а коли
+        сама живить прилади під час відключення, і скільки енергії за день дадуть власні джерела.
+      </p>
+      <ul className="balance-howto">
+        <li>
+          <strong>Над лінією</strong> — звідки енергія: мережа, станція, генератор, сонце.
+        </li>
+        <li>
+          <strong>Під лінією</strong> — куди вона йде: на прилади або на заряд станції.
+        </li>
+        <li>Кожен стовпчик — година; ті, що вже минули, бліді. Наведіть на стовпчик, щоб побачити кВт·год.</li>
+      </ul>
 
       {!hasData ? (
         <p className="muted">Немає даних для розрахунку.</p>
@@ -111,7 +123,7 @@ export default function EnergyBalance({ result }) {
                 <g key={f}>
                   <line className={f === 0 ? 'chart-base' : 'chart-grid'} x1={M.left} x2={W - M.right} y1={zero - f * (plotH / 2)} y2={zero - f * (plotH / 2)} />
                   <text className="chart-tick" x={M.left - 6} y={zero - f * (plotH / 2) + 4} textAnchor="end">
-                    {fmt(Math.abs(kwh(top * f)), top >= 2000 ? 0 : 1)}
+                    {fmt(Math.abs(kwh(top * f)), Number.isInteger(Math.abs(kwh(top * f))) ? 0 : 1)}
                   </text>
                 </g>
               ))}
