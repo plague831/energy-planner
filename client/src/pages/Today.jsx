@@ -16,7 +16,7 @@ const nowSlotOf = () => {
 
 // Головний екран для звичайного користувача: що зі світлом зараз, скільки до відключення,
 // що з зарядом станції і що робити далі. Усе технічне — у розділі «Детально».
-export default function Today({ household, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, onSetCharge, hasQueue, onSelectDay, onExportCalendar }) {
+export default function Today({ household, actual, actualNote, onReport, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, onSetCharge, hasQueue, onSelectDay, onExportCalendar }) {
   const [now, setNow] = useState(nowSlotOf);
   useEffect(() => {
     const id = setInterval(() => setNow(nowSlotOf()), 30_000);
@@ -64,7 +64,7 @@ export default function Today({ household, result, busy, planDay, scheduleNote, 
         </section>
       )}
 
-      {!isTomorrow && <PowerStatus household={household} result={result} now={now} onSetCharge={onSetCharge} />}
+      {!isTomorrow && <PowerStatus household={household} result={result} now={now} onSetCharge={onSetCharge} actual={actual} actualNote={actualNote} onReport={onReport} />}
 
       <section className="card">
         <h2>
@@ -113,7 +113,7 @@ function GeneratorRules({ generators }) {
   );
 }
 
-function PowerStatus({ household, result, now, onSetCharge }) {
+function PowerStatus({ household, result, now, onSetCharge, actual, actualNote, onReport }) {
   const outages = (household.outages ?? []).map((o) => {
     const from = toSlot(o.from);
     let to = toSlot(o.to);
@@ -135,7 +135,15 @@ function PowerStatus({ household, result, now, onSetCharge }) {
           {current ? '🌑' : '💡'}
         </span>
         <div>
-          <div className="status-title">{current ? 'Зараз відключення за графіком' : 'Зараз світло є'}</div>
+          <div className="status-title">
+            {current
+              ? actual?.type === 'off'
+                ? `Зараз світла немає (ви повідомили о ${actual.time})`
+                : 'Зараз відключення за графіком'
+              : actual?.type === 'on'
+                ? `Зараз світло є (повернулось о ${actual.time})`
+                : 'Зараз світло є'}
+          </div>
           <div className="status-sub">
             {current
               ? `Світло має повернутися о ${slotTime(current.to)} (через ${until(current.to - inside(current))})`
@@ -155,6 +163,19 @@ function PowerStatus({ household, result, now, onSetCharge }) {
           </span>
         </div>
       )}
+      {actualNote && <p className="actual-note">{actualNote}</p>}
+      <div className="report-buttons">
+        <span className="muted">Насправді інакше?</span>
+        {current ? (
+          <button type="button" className="secondary" onClick={() => onReport('on')}>
+            💡 Світло вже є
+          </button>
+        ) : (
+          <button type="button" className="secondary" onClick={() => onReport('off')}>
+            🌑 Світла немає
+          </button>
+        )}
+      </div>
       {capacity && <ChargeCorrection onSetCharge={onSetCharge} />}
     </section>
   );

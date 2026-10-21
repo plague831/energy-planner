@@ -32,9 +32,11 @@ function saveLastPlan(entry) {
 
 // «Підпис» введених людиною поточних значень: якщо вона їх змінила, довіряємо їм, а не розрахунку.
 const enteredState = (h) => JSON.stringify((h.sources ?? []).map((s) => [s.id, s.initialSocPct ?? null, s.fuelPct ?? null, s.capacityWh ?? null]));
-const outagesKey = (h) => JSON.stringify(h.outages ?? []);
 
-export async function planDay(household, algorithm, { day = 'today' } = {}) {
+// scheduleOutages — опублікований графік (без уточнень від людини), щоб «графік змінився» спрацьовувало
+// лише на зміну графіка, а не на кнопки «світло зникло / повернулось».
+export async function planDay(household, algorithm, { day = 'today', scheduleOutages } = {}) {
+  const scheduleKey = JSON.stringify(scheduleOutages ?? household.outages ?? []);
   if (day === 'tomorrow') return { result: await buildPlan(household, algorithm), changed: null };
 
   const nowSlot = currentSlot();
@@ -60,13 +62,13 @@ export async function planDay(household, algorithm, { day = 'today' } = {}) {
   const result = mergeWithPast(fresh, fullDay ? { trace: fullDay.nominal.trace } : prev, household);
 
   // Що змінилось порівняно з попереднім планом, коли змінився графік відключень.
-  const changed = prev && prev.outages !== outagesKey(household) ? describeChanges(prev.schedule, result.schedule, nowSlot) : null;
+  const changed = prev && prev.outages !== scheduleKey ? describeChanges(prev.schedule, result.schedule, nowSlot) : null;
 
   const capacity = household.battery?.capacityWh;
   saveLastPlan({
     date: localDate(0),
     entered: enteredState(household),
-    outages: outagesKey(household),
+    outages: scheduleKey,
     schedule: result.schedule,
     socBySlot: capacity ? result.nominal.trace.map((t) => (t.energyWh / capacity) * 100) : [],
     fuelBySlot: result.nominal.trace.map((t) => t.fuelPct),

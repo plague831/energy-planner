@@ -1892,3 +1892,41 @@ details.faq p {
 .balance-howto strong {
   color: var(--text);
 }
+
+.report-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.report-buttons button {
+  padding: 6px 12px;
+}
+
+.actual-note {
+  margin: 10px 0 0;
+  font-size: 14px;
+}
+
+.observations {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0 12px;
+  font-size: 14px;
+}
+
+.observations th,
+.observations td {
+  text-align: left;
+  padding: 6px 8px 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.observations th {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted);
+}

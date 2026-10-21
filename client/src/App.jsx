@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getDefaults, getAlgorithms, buildPlan } from './api.js';
 import { readChoice, saveChoice, loadDay } from './yasno.js';
 import { migrateHousehold, withSources } from './sources.js';
 import { planDay as computePlan } from './planning.js';
+import { readEvents, addEvent, clearEvents, currentActual, applyActual } from './actual.js';
 import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
@@ -138,13 +139,29 @@ export default function App() {
   // План перераховується сам після кожної зміни даних (з невеликою затримкою, поки людина вводить).
   // План на сьогодні будується з поточного моменту; якщо змінився графік, людина бачить, що саме перенесено.
   const day = planDay?.day ?? 'today';
+
+  // Фактичний стан світла, який повідомила людина, уточнює графік на сьогодні.
+  const [actualEvents, setActualEvents] = useState(readEvents);
+  const actual = currentActual(actualEvents);
+  const { effectiveHousehold, actualNote } = useMemo(() => {
+    if (!household || day !== 'today') return { effectiveHousehold: household, actualNote: null };
+    const { outages, note } = applyActual(household.outages ?? [], actual);
+    return { effectiveHousehold: outages === household.outages ? household : { ...household, outages }, actualNote: note };
+  }, [household, day, actual]);
+
+  const reportActual = (type) => {
+    const choice = readChoice();
+    setActualEvents(addEvent(type, household, choice.group ? `${choice.source} ${choice.group}` : null));
+    notify('success', type === 'off' ? 'Зафіксовано: світла немає. План перебудовано' : 'Зафіксовано: світло є. План перебудовано');
+  };
+
   useEffect(() => {
-    if (!household || !onboarded) return;
+    if (!effectiveHousehold || !onboarded) return;
     const id = ++planRequest.current;
     const timer = setTimeout(async () => {
       setBusy(true);
       try {
-        const { result: plan, changed } = await computePlan(household, algorithm, { day });
+        const { result: plan, changed } = await computePlan(effectiveHousehold, algorithm, { day, scheduleOutages: household.outages });
         if (id === planRequest.current) {
           setResult(plan);
           setError(null);
@@ -160,7 +177,7 @@ export default function App() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [household, algorithm, onboarded, day]);
+  }, [effectiveHousehold, algorithm, onboarded, day]);
 
   // Поки сторінка відкрита, графік на сьогодні перевіряється кожні 10 хвилин,
   // а план на решту дня оновлюється з поточного моменту.
@@ -239,7 +256,7 @@ export default function App() {
 
   const makePlan = () =>
     run(async () => {
-      const { result: plan } = await computePlan(household, algorithm, { day });
+      const { result: plan } = await computePlan(effectiveHousehold, algorithm, { day, scheduleOutages: household.outages });
       setResult(plan);
       notify('success', `План складено: ${plan.algorithmName}`);
     });
@@ -312,7 +329,10 @@ export default function App() {
 
         {route === 'today' && (
           <Today
-            household={household}
+            household={effectiveHousehold}
+            actual={actual}
+            actualNote={actualNote}
+            onReport={reportActual}
             result={result}
             busy={busy}
             planDay={planDay}
@@ -359,6 +379,8 @@ export default function App() {
             onCompare={compareAll}
             onReset={resetToDemo}
             canReset={Boolean(defaults)}
+            events={actualEvents}
+            onClearEvents={() => setActualEvents(clearEvents())}
           />
         )}
         {route === 'help' && <Help />}
