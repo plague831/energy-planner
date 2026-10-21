@@ -63,3 +63,13 @@ test('некоректний момент перепланування відх�
   });
   assert.equal(res.status, 400);
 });
+
+test('без бази даних маршрути кабінету відповідають 503', async () => {
+  const res = await fetch(`${url}/api/households`);
+  assert.equal(res.status, 503);
+});
+
+test('невідомий маршрут API повертає 404', async () => {
+  const res = await fetch(`${url}/api/nothing-here`);
+  assert.equal(res.status, 404);
+});
