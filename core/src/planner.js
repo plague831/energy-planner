@@ -1,4 +1,4 @@
-import { buildModel } from './model.js';
+import { buildModel, GENERATOR_THRESHOLD_STEP } from './model.js';
 import { simulate, DEFAULT_WEIGHTS, SKIP } from './simulate.js';
 import { generateScenarios } from './scenarios.js';
 import { robustCost, evaluatePlan, DEFAULT_RISK } from './robust.js';
@@ -49,7 +49,8 @@ export function plan(household, options = {}) {
   const algorithm = options.algorithm ?? 'robust-ga';
   const weights = { ...DEFAULT_WEIGHTS, ...options.weights };
   const risk = { ...DEFAULT_RISK, ...options.risk };
-  const model = buildModel(household);
+  // options.replan — перепланування з поточного моменту (див. buildModel).
+  const model = buildModel(household, options.replan ?? null);
 
   const started = performance.now();
   const result = solve(model, algorithm, options);
@@ -68,6 +69,8 @@ export function plan(household, options = {}) {
     algorithmName: ALGORITHMS[algorithm],
     elapsedMs,
     schedule: describeSchedule(model, result.starts),
+    generators: describeGenerators(model, result.starts),
+    fromSlot: model.startSlot,
     nominal,
     robustness,
     convergence: result.history ?? null,
@@ -77,7 +80,7 @@ export function plan(household, options = {}) {
 export function describeSchedule(model, starts) {
   return model.appliances.map((a, i) => {
     const s = starts[i];
-    if (s === SKIP) return { id: a.id, name: a.name, skipped: true };
+    if (s === SKIP) return { id: a.id, name: a.name, skipped: true, missed: Boolean(a.missed) };
     return {
       id: a.id,
       name: a.name,
@@ -86,6 +89,20 @@ export function describeSchedule(model, starts) {
       endSlot: s + a.duration,
       start: slotToTime(s),
       end: slotToTime(s + a.duration),
+    };
+  });
+}
+
+// Правило для кожного генератора: з якого заряду станції його вмикати (null — не вмикати сьогодні).
+export function describeGenerators(model, starts) {
+  const nA = model.appliances.length;
+  return model.generators.map((g, k) => {
+    const gene = starts[nA + k];
+    return {
+      id: g.id,
+      name: g.name,
+      thresholdPct: gene === SKIP || gene === undefined ? null : gene * GENERATOR_THRESHOLD_STEP,
+      noBattery: !model.battery,
     };
   });
 }

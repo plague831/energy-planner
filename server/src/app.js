@@ -30,10 +30,13 @@ export function createApp({ db = null } = {}) {
   app.use('/api/sources', sourcesRouter());
 
   app.post('/api/plan', (req, res) => {
-    const { household, algorithm = 'robust-ga', uncertainty, weights } = req.body ?? {};
+    const { household, algorithm = 'robust-ga', uncertainty, weights, replan } = req.body ?? {};
     if (!ALGORITHMS[algorithm]) return res.status(400).json({ error: `Невідомий метод: ${algorithm}` });
+    if (replan && !(Number.isInteger(replan.nowSlot) && replan.nowSlot >= 0 && replan.nowSlot < 96)) {
+      return res.status(400).json({ error: 'replan.nowSlot має бути цілим від 0 до 95' });
+    }
     try {
-      const result = plan(household, { algorithm, uncertainty, weights });
+      const result = plan(household, { algorithm, uncertainty, weights, replan });
       res.json(result);
     } catch (err) {
       res.status(400).json({ error: err.message });

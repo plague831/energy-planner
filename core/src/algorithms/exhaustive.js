@@ -4,7 +4,7 @@ import { SKIP } from '../simulate.js';
 // Придатний лише для малих задач: кількість комбінацій — добуток (latestStart − earliest + 2) по приладах.
 // Використовується в експерименті, щоб виміряти, наскільки ГА наближається до оптимуму.
 export function exhaustivePlan(model, fitness, { maxCombinations = 2_000_000 } = {}) {
-  const domains = model.appliances.map((a) => {
+  const domains = (model.genes ?? model.appliances).map((a) => {
     const values = [SKIP];
     for (let s = a.earliest; s <= a.latestStart; s++) values.push(s);
     return values;

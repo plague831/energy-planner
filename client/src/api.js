@@ -8,11 +8,12 @@ async function request(path, options) {
 export const getDefaults = () => request('/api/defaults');
 export const getAlgorithms = () => request('/api/algorithms');
 
-export const buildPlan = (household, algorithm) =>
+// replan (необов'язково) — перепланування з поточного моменту: { nowSlot, fixedStarts, socPct, fuelPct }.
+export const buildPlan = (household, algorithm, replan) =>
   request('/api/plan', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ household, algorithm }),
+    body: JSON.stringify({ household, algorithm, replan }),
   });
 
 export const getYasnoRegions = () => request('/api/sources/yasno/regions');

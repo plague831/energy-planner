@@ -14,11 +14,12 @@ export const DEFAULT_GA = {
 };
 
 // Генетичний алгоритм пошуку часу запуску приладів.
-// Хромосома — масив стартових слотів (або -1). fitness(starts) повертає штраф, який мінімізується.
+// Хромосома — масив стартових слотів (або -1) і порогів генераторів. fitness(starts) повертає штраф, який мінімізується.
 export function geneticPlan(model, fitness, options = {}) {
   const p = { ...DEFAULT_GA, ...options };
   const rng = createRng(p.seed);
-  const genes = model.appliances;
+  // Гени: слоти запуску приладів і пороги запуску генераторів (model.genes); для старих моделей — лише прилади.
+  const genes = model.genes ?? model.appliances;
   const n = genes.length;
   if (n === 0) return { starts: [], cost: fitness([]), history: [], evaluations: 1 };
   const mutationRate = p.mutationRate ?? 1 / n;
@@ -36,11 +37,13 @@ export function geneticPlan(model, fitness, options = {}) {
     return value;
   };
 
+  // Зафіксований ген (прилад, який уже ввімкнувся до перепланування) не змінюється.
   const randomGene = (i) =>
-    rng.chance(p.skipRate) ? SKIP : rng.int(genes[i].earliest, genes[i].latestStart);
+    genes[i].fixed ? genes[i].earliest : rng.chance(p.skipRate) ? SKIP : rng.int(genes[i].earliest, genes[i].latestStart);
 
   const mutateGene = (i, value) => {
     const a = genes[i];
+    if (a.fixed) return a.earliest;
     const r = rng.next();
     if (r < 0.5 && value !== SKIP) {
       const delta = rng.int(1, 4) * (rng.chance(0.5) ? 1 : -1);

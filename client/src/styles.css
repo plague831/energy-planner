@@ -15,6 +15,10 @@
   --good: #15803d;
   --warn: #b45309;
   --bad: #b91c1c;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235d6878' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   color-scheme: light;
 }
@@ -37,6 +41,10 @@
     --good: #4ade80;
     --warn: #fbbf24;
     --bad: #f87171;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
     --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239aa5b5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
@@ -71,25 +79,6 @@ body {
   color: var(--muted);
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  gap: 20px;
-  align-items: start;
-}
-
-@media (max-width: 1100px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.form,
-.results {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
 
 .card {
   background: var(--surface);
@@ -679,4 +668,1040 @@ button:disabled {
 
 .hint.field-note {
   margin: 4px 0 0;
+}
+
+.auto-toggle {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.timeline-title {
+  margin: 18px 0 8px;
+}
+
+.action-list ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.action {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px 14px 1fr;
+  gap: 0 10px;
+  align-items: start;
+  padding: 6px 0;
+}
+
+.action-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding-top: 1px;
+}
+
+.action-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.action.outage .action-dot {
+  background: var(--grid-off);
+}
+
+.action.grid .action-dot {
+  background: var(--good);
+}
+
+.action.charge .action-dot {
+  background: var(--soc);
+  border-radius: 2px;
+}
+
+.action.warn .action-dot {
+  background: var(--warn);
+}
+
+.action-title {
+  font-weight: 500;
+}
+
+.action-detail {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.action.warn .action-detail {
+  color: var(--warn);
+}
+
+.action.past {
+  opacity: 0.45;
+}
+
+.now-marker {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 8px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.now-marker::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+.action.done {
+  display: block;
+}
+
+.action-skipped {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.timeline .grid-possible {
+  fill: url(#possible-hatch);
+}
+
+.timeline .grid-possible-bg {
+  fill: var(--grid-on);
+}
+
+.timeline .grid-possible-line {
+  stroke: var(--warn);
+  stroke-width: 3;
+}
+
+.action.possible .action-dot {
+  background: transparent;
+  border: 2px dashed var(--warn);
+}
+
+
+.station-model {
+  margin-bottom: 12px;
+}
+
+/* На вузьких екранах рядки таблиць перетворюються на картки з підписами полів. */
+@media (max-width: 640px) {
+  .list-editor table,
+  .list-editor tbody,
+  .list-editor tr,
+  .list-editor td {
+    display: block;
+  }
+
+  .list-editor thead {
+    display: none;
+  }
+
+  .list-editor tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 10px;
+    padding: 12px 40px 12px 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+  }
+
+  .list-editor td {
+    padding: 0;
+    min-width: 0;
+  }
+
+  .list-editor td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 3px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .list-editor td:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .list-editor td:last-child {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+
+  .list-editor input[type='number'],
+  .list-editor input[type='text'],
+  .list-editor input[type='time'],
+  .list-editor select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .list-editor td:has(input[type='checkbox']) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .list-editor td:has(input[type='checkbox'])::before {
+    margin: 0;
+    order: 2;
+  }
+}
+
+.plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/* Друк: лише план (список дій і діаграма), без форми й кнопок, чорним по білому. */
+@media print {
+  :root {
+    --bg: #fff;
+    --surface: #fff;
+    --text: #000;
+    --muted: #444;
+    --border: #bbb;
+    color-scheme: light;
+  }
+
+  .no-print,
+  .toasts,
+  .page-header p {
+    display: none !important;
+  }
+
+  .card {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .action {
+    break-inside: avoid;
+  }
+
+  .action.past {
+    opacity: 1;
+  }
+
+  .now-marker {
+    display: none;
+  }
+
+  .timeline svg {
+    min-width: 0;
+  }
+}
+
+/* ---------- Розділи сайту ---------- */
+
+.page.narrow {
+  max-width: 920px;
+}
+
+.page-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-title {
+  margin: 4px 0 16px;
+  font-size: 24px;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header-inner {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-top {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.nav-top a,
+.nav-bottom a {
+  color: var(--muted);
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.nav-top a {
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+.nav-top a:hover {
+  color: var(--text);
+}
+
+.nav-top a.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 600;
+}
+
+.nav-bottom {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .nav-top {
+    display: none;
+  }
+
+  .nav-bottom {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+
+  .nav-bottom a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 2px;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .nav-bottom a span {
+    font-size: 20px;
+  }
+
+  .nav-bottom a.active {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .page {
+    padding-bottom: 96px;
+  }
+
+  .page-title {
+    font-size: 21px;
+  }
+}
+
+.step {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 14px;
+  vertical-align: 2px;
+}
+
+details.more {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+details.more > summary,
+details.faq > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+details.more[open] > summary {
+  margin-bottom: 10px;
+}
+
+.station-simple {
+  margin-top: 12px;
+}
+
+.notice {
+  border-left: 4px solid var(--accent);
+}
+
+.notice.warn {
+  border-left-color: var(--warn);
+}
+
+.notice a {
+  color: var(--accent);
+}
+
+/* ---------- Сьогодні ---------- */
+
+.day-switch {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.day-switch button {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 6px 18px;
+}
+
+.day-switch button.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.status {
+  border-left: 6px solid var(--good);
+}
+
+.status.off {
+  border-left-color: var(--grid-off);
+}
+
+.status-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.status-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.status-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.status-sub {
+  color: var(--muted);
+}
+
+.status-battery {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.battery-bar {
+  flex: 0 0 120px;
+  height: 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.battery-bar div {
+  height: 100%;
+  background: var(--soc);
+}
+
+.next-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.next-icon {
+  font-size: 28px;
+}
+
+.next-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.next-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ---------- Прилади кнопками ---------- */
+
+.device-picker h3 {
+  margin: 14px 0 2px;
+}
+
+.device-picker h3:first-child {
+  margin-top: 0;
+}
+
+.device-tiles {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.device-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.device-icon {
+  font-size: 20px;
+}
+
+.device-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-power {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.device-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+}
+
+.chip.selected {
+  border-style: solid;
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* ---------- Майстер першого запуску ---------- */
+
+.onboarding-hello {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.stepper {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+  flex-wrap: wrap;
+}
+
+.stepper li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.stepper li span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.stepper li.active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stepper li.active span,
+.stepper li.done span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.onboarding-step h2 {
+  margin-bottom: 6px;
+}
+
+.onboarding-step .checkbox {
+  margin-top: 12px;
+}
+
+.choice-buttons {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 14px;
+}
+
+.choice-buttons .chip {
+  padding: 10px 22px;
+  font-size: 16px;
+}
+
+.onboarding-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.onboarding input[type='range'] {
+  padding: 0;
+  height: auto;
+}
+
+/* ---------- Довідка ---------- */
+
+.how-steps {
+  padding-left: 20px;
+  margin: 0 0 12px;
+}
+
+.how-steps li {
+  margin-bottom: 8px;
+}
+
+details.faq {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+details.faq > summary {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+details.faq p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.help a {
+  color: var(--accent);
+}
+
+@media print {
+  .app-header,
+  .nav-bottom,
+  .day-switch,
+  .next-step {
+    display: none !important;
+  }
+}
+
+.action-list .action.past {
+  display: none;
+}
+
+.action-list.show-past .action.past {
+  display: grid;
+}
+
+.past-toggle {
+  margin: 0 0 6px;
+}
+
+@media print {
+  .action-list .action.past {
+    display: grid;
+  }
+}
+
+/* ---------- Збереження змін ---------- */
+
+.save-footer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.save-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(620px, calc(100vw - 32px));
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  font-weight: 500;
+}
+
+.save-bar div {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 720px) {
+  .save-bar {
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+  }
+
+  .page {
+    padding-bottom: 160px;
+  }
+
+  .toasts {
+    bottom: calc(140px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ---------- Графіки «Скільки протримається» ---------- */
+
+.conclusion {
+  margin: 4px 0 16px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.conclusion-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.conclusion-main {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.conclusion-sub {
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.autonomy-charts {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.autonomy-charts h3 {
+  margin: 0 0 4px;
+}
+
+.breakdown-rows {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.breakdown-rows li {
+  display: grid;
+  grid-template-columns: minmax(120px, 210px) 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.breakdown-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breakdown-track {
+  height: 14px;
+}
+
+.breakdown-bar {
+  display: block;
+  height: 100%;
+  background: var(--series-1);
+  border-radius: 0 4px 4px 0;
+}
+
+.breakdown-value {
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-value strong {
+  color: var(--text);
+}
+
+@media (max-width: 560px) {
+  .breakdown-rows li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .breakdown-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 4px 0 8px;
+  font-size: 14px;
+}
+
+.chart-legend i,
+.chart-tooltip i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+}
+
+.chart-wrap {
+  position: relative;
+}
+
+.chart-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: pan-y;
+}
+
+.chart-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-base {
+  stroke: var(--muted);
+  stroke-width: 1;
+}
+
+.chart-tick {
+  fill: var(--muted);
+  font-size: 12px;
+}
+
+.chart-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.chart-dot {
+  fill: currentColor;
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.chart-label {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chart-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.chart-tooltip-time {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.chart-caption {
+  margin: 6px 0 0;
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* ---------- Джерела живлення в «Мій дім» ---------- */
+
+.sources-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-card {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.source-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.source-card-icon {
+  font-size: 22px;
+}
+
+.source-card-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.source-card .grid-fields {
+  margin-bottom: 0;
+}
+
+.source-card details.more {
+  margin-top: 10px;
+}
+
+.action.generator .action-dot {
+  background: var(--series-2);
+  border-radius: 2px;
+}
+
+.notice.replan {
+  position: relative;
+  border-left-color: var(--accent);
+  padding-right: 44px;
+}
+
+.notice.replan ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.notice-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.generator-rules {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.charge-fix {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.charge-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.charge-form .field {
+  flex: 1 1 200px;
+}
+
+.timeline .bar-generator {
+  fill: var(--series-2);
+}
+
+.timeline .bar-solar {
+  fill: var(--series-4);
 }

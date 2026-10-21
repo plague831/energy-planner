@@ -13,15 +13,30 @@ export default function Timeline({ result, household }) {
   const top = 30;
   const gridRowY = top;
   const appliancesY = gridRowY + ROW_H + 8;
-  const chartY = appliancesY + rows.length * ROW_H + 16;
+  // Окремі рядки для генератора і сонця, якщо вони є в плані.
+  const hasGenerator = (result.generators ?? []).length > 0;
+  const hasSolar = trace.some((t) => (t.solarW ?? 0) > 0);
+  const extraY = appliancesY + rows.length * ROW_H;
+  const generatorY = extraY;
+  const solarY = extraY + (hasGenerator ? ROW_H : 0);
+  const maxSolar = Math.max(1, ...trace.map((t) => t.solarW ?? 0));
+  const chartY = extraY + (hasGenerator ? ROW_H : 0) + (hasSolar ? ROW_H : 0) + 16;
   const height = chartY + (household.battery ? CHART_H + 24 : 0);
 
   const outageRuns = runs(trace.map((t) => !t.gridOn));
   const capacity = household.battery?.capacityWh;
+  // Можливі відключення з YASNO: показуються штриховкою, але в розрахунку плану не враховуються.
+  const possible = (household.possibleOutages ?? []).map((o) => [toSlot(o.from), toSlot(o.to)]);
 
   return (
     <div className="timeline">
       <svg viewBox={`0 0 ${WIDTH} ${height}`} role="img" aria-label="Часова діаграма плану на добу">
+        <defs>
+          <pattern id="possible-hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="8" height="8" className="grid-possible-bg" />
+            <line x1="0" y1="0" x2="0" y2="8" className="grid-possible-line" />
+          </pattern>
+        </defs>
         {Array.from({ length: 25 }, (_, h) => (
           <g key={h}>
             <line className="tick" x1={x(h * 4)} x2={x(h * 4)} y1={top - 4} y2={height - 20} />
@@ -39,6 +54,10 @@ export default function Timeline({ result, household }) {
         <rect className="grid-on" x={x(0)} y={gridRowY + 4} width={SLOTS * SLOT_W} height={ROW_H - 8} rx={4} />
         {outageRuns.map(([from, to]) => (
           <rect key={from} className="grid-off" x={x(from)} y={gridRowY + 4} width={(to - from) * SLOT_W} height={ROW_H - 8} rx={4} />
+        ))}
+
+        {possible.map(([from, to]) => (
+          <rect key={`p${from}`} className="grid-possible" x={x(from)} y={gridRowY + 4} width={(to - from) * SLOT_W} height={ROW_H - 8} rx={4} />
         ))}
 
         {rows.map((r, i) => {
@@ -74,6 +93,40 @@ export default function Timeline({ result, household }) {
           );
         })}
 
+        {hasGenerator && (
+          <g>
+            <text className="row-label" x={8} y={generatorY + 23}>
+              Генератор
+            </text>
+            {runs(trace.map((t) => (t.generatorW ?? 0) > 0)).map(([from, to]) => (
+              <g key={`g${from}`}>
+                <rect className="bar bar-generator" x={x(from)} y={generatorY + 5} width={(to - from) * SLOT_W} height={ROW_H - 10} rx={4} />
+                <text className="bar-label" x={x(to) + 6} y={generatorY + 23}>
+                  {slotTime(from)}–{slotTime(to)}
+                </text>
+              </g>
+            ))}
+            {!trace.some((t) => (t.generatorW ?? 0) > 0) && (
+              <text className="skipped" x={x(0) + 6} y={generatorY + 23}>
+                сьогодні не знадобиться
+              </text>
+            )}
+          </g>
+        )}
+
+        {hasSolar && (
+          <g>
+            <text className="row-label" x={8} y={solarY + 23}>
+              Сонячні панелі
+            </text>
+            {trace.map((t, i) =>
+              (t.solarW ?? 0) > 0 ? (
+                <rect key={`s${i}`} className="bar-solar" x={x(i)} y={solarY + 5 + (ROW_H - 10) * (1 - t.solarW / maxSolar)} width={SLOT_W} height={(ROW_H - 10) * (t.solarW / maxSolar)} />
+              ) : null,
+            )}
+          </g>
+        )}
+
         {capacity && (
           <g>
             <text className="row-label" x={8} y={chartY + 16}>
@@ -97,6 +150,16 @@ export default function Timeline({ result, household }) {
       </svg>
     </div>
   );
+}
+
+function toSlot(time) {
+  const [h, m] = time.split(':').map(Number);
+  return Math.round((h * 60 + m) / 15);
+}
+
+function slotTime(slot) {
+  const m = slot * 15;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
 function x(slot) {

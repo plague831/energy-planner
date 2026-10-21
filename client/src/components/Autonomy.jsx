@@ -1,17 +1,35 @@
 import { useMemo, useState } from 'react';
 import { batterySource, generatorSource, solarSource, estimateAutonomy } from '@energy-planner/core/autonomy';
 import { appliancePresets, baseLoadPresets } from '../presets.js';
+import { SOURCE_KINDS } from '../sources.js';
+import { EnergyBreakdown, DischargeChart, clock, hoursText } from './AutonomyCharts.jsx';
 
-const DEFAULT_GENERATOR = { ratedW: 2500, tankHoursAtHalf: 8, fuelPct: 100 };
-const DEFAULT_SOLAR = { peakW: 800, sunHours: 3 };
 const EXTRA_PRESETS = [...baseLoadPresets, ...appliancePresets];
 
-// «Скільки протримається»: людина відмічає, що хоче живити, і бачить для кожного джерела
-// навантаження у відсотках і приблизний час роботи.
-export default function Autonomy({ household, onChange }) {
-  const set = (key, value) => onChange({ ...household, [key]: value });
-  const generator = household.generator ?? null;
-  const solar = household.solar ?? null;
+// Кольори закріплені за джерелом (за його місцем у списку «Мій дім»), тож не змінюються, коли інші вимкнено.
+const PALETTE = ['--series-1', '--series-2', '--series-3', '--series-4'];
+
+// Об'єкт розрахунку ядра для джерела зі списку «Мій дім».
+function toCore(s) {
+  if (s.kind === 'battery' && s.capacityWh > 0 && s.inverterMaxW > 0) {
+    return batterySource({ name: s.name, capacityWh: s.capacityWh, socPct: s.initialSocPct ?? 100, minSocPct: s.minSocPct ?? 10, inverterMaxW: s.inverterMaxW });
+  }
+  if (s.kind === 'generator' && s.ratedW > 0 && s.tankHoursAtHalf > 0) return generatorSource(s);
+  if (s.kind === 'solar' && s.peakW > 0 && s.sunHours > 0) return solarSource(s);
+  return null;
+}
+
+// «Резервне живлення»: людина обирає джерела з «Мого дому» і те, що хоче живити,
+// і бачить для кожного джерела навантаження, час роботи і графік розряду.
+export default function Autonomy({ household }) {
+  const allSources = household.sources ?? [];
+  const [offSources, setOffSources] = useState(() => new Set());
+  const toggleSource = (id) =>
+    setOffSources((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const own = useMemo(
     () => [
@@ -39,68 +57,43 @@ export default function Autonomy({ household, onChange }) {
 
   const consumers = items.filter(isOn).map((c) => ({ name: c.name || 'Без назви', powerW: Number(c.powerW) || 0, priority: c.priority }));
 
-  const sources = [];
-  const b = household.battery;
-  if (b?.capacityWh > 0 && b.inverterMaxW > 0) {
-    sources.push(
-      batterySource({
-        name: b.model ? `Станція ${b.model}` : 'Зарядна станція',
-        capacityWh: b.capacityWh,
-        socPct: b.initialSocPct ?? 100,
-        minSocPct: b.minSocPct ?? 10,
-        inverterMaxW: b.inverterMaxW,
-      }),
-    );
-  }
-  if (generator?.ratedW > 0 && generator.tankHoursAtHalf > 0) sources.push(generatorSource(generator));
-  if (solar?.peakW > 0 && solar.sunHours > 0) sources.push(solarSource(solar));
-
+  // Джерела, які людина відмітила, разом з їхнім кольором і параметрами для графіка.
+  const selected = allSources
+    .map((src, index) => ({ src, color: PALETTE[index % PALETTE.length], core: toCore(src) }))
+    .filter((x) => x.core && !offSources.has(x.src.id));
+  const sources = selected.map((x) => x.core);
   const estimate = estimateAutonomy(sources, consumers);
 
   return (
     <section className="card autonomy">
-      <h2>Скільки протримається</h2>
       <p className="hint">Відмітьте, що хочете живити під час відключення, і побачите, на скільки вистачить кожного джерела.</p>
 
       <div className="autonomy-inputs">
         <div>
           <h3>Джерела живлення</h3>
-          <p className="source-line">
-            {b ? (
-              <>
-                <strong>{b.model ?? 'Зарядна станція'}</strong>: {fmt(b.capacityWh)} Вт·год, заряд {b.initialSocPct ?? 100}%, інвертор до {fmt(b.inverterMaxW)} Вт
-                <span className="muted"> (з форми ліворуч)</span>
-              </>
-            ) : (
-              <span className="muted">Зарядної станції немає, її можна додати у формі ліворуч.</span>
-            )}
+          {allSources.length === 0 ? (
+            <p className="muted">
+              Джерел ще немає. Додайте зарядну станцію, генератор чи панелі в <a href="#/home">«Мій дім»</a>.
+            </p>
+          ) : (
+            <ul className="consumer-list">
+              {allSources.map((src, index) => (
+                <li key={src.id}>
+                  <label className="checkbox">
+                    <input type="checkbox" checked={!offSources.has(src.id)} onChange={() => toggleSource(src.id)} />
+                    <i className="swatch" style={{ background: `var(${PALETTE[index % PALETTE.length]})` }} aria-hidden="true" />
+                    <span className="consumer-name">
+                      {SOURCE_KINDS[src.kind].icon} {src.name}
+                    </span>
+                    <span className="muted">{describeSource(src)}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="hint">
+            Змінити або додати джерела можна в <a href="#/home">«Мій дім»</a>.
           </p>
-
-          <label className="checkbox">
-            <input type="checkbox" checked={Boolean(generator)} onChange={(e) => set('generator', e.target.checked ? DEFAULT_GENERATOR : null)} />
-            Бензиновий генератор
-          </label>
-          {generator && (
-            <div className="grid-fields compact">
-              <Num label="Потужність, Вт" value={generator.ratedW} onChange={(v) => set('generator', { ...generator, ratedW: v })} />
-              <Num label="Повного бака на, год" value={generator.tankHoursAtHalf} onChange={(v) => set('generator', { ...generator, tankHoursAtHalf: v })} />
-              <Num label="Пального, %" value={generator.fuelPct} onChange={(v) => set('generator', { ...generator, fuelPct: v })} />
-            </div>
-          )}
-          {generator && (
-            <p className="hint field-note">У паспорті генератора час роботи на повному баку зазвичай вказують для навантаження 50%.</p>
-          )}
-
-          <label className="checkbox">
-            <input type="checkbox" checked={Boolean(solar)} onChange={(e) => set('solar', e.target.checked ? DEFAULT_SOLAR : null)} />
-            Сонячні панелі
-          </label>
-          {solar && (
-            <div className="grid-fields compact">
-              <Num label="Потужність, Вт" value={solar.peakW} onChange={(v) => set('solar', { ...solar, peakW: v })} />
-              <Num label="Сонячних годин" value={solar.sunHours} step={0.5} onChange={(v) => set('solar', { ...solar, sunHours: v })} />
-            </div>
-          )}
         </div>
 
         <div>
@@ -144,17 +137,71 @@ export default function Autonomy({ household, onChange }) {
       </div>
 
       {sources.length === 0 ? (
-        <p className="muted">Додайте хоча б одне джерело: зарядну станцію у формі, генератор або панелі.</p>
+        <p className="muted">Відмітьте хоча б одне джерело живлення.</p>
       ) : consumers.length === 0 ? (
         <p className="muted">Відмітьте хоча б одного споживача.</p>
       ) : (
-        <div className="source-results">
-          {estimate.sources.map((r) => (
-            <SourceResult key={r.name} r={r} />
-          ))}
-        </div>
+        <>
+          <Conclusion estimate={estimate} />
+          <div className="source-results">
+            {estimate.sources.map((r) => (
+              <SourceResult key={r.name} r={r} />
+            ))}
+          </div>
+          <div className="autonomy-charts">
+            <DischargeChart series={dischargeSeries(estimate, selected)} />
+            <EnergyBreakdown consumers={consumers} hours={estimate.sources.find((r) => r.kind !== 'solar' && !r.overloaded)?.hours} />
+          </div>
+        </>
       )}
     </section>
+  );
+}
+
+// Скільки працює джерело на тих споживачах, які воно реально витягне (при перевантаженні — без зайвих).
+const runHours = (r) => (r.overloaded ? r.fitted?.hours : r.hours);
+
+function dischargeSeries(estimate, selected) {
+  return estimate.sources
+    .map((r, i) => ({ r, src: selected[i].src, color: selected[i].color }))
+    .filter(({ r }) => r.kind !== 'solar' && Number.isFinite(runHours(r)))
+    .map(({ r, src, color }) => ({
+      name: `${src.name} (${r.kind === 'battery' ? 'заряд' : 'пальне'})`,
+      color,
+      hours: runHours(r),
+      startPct: r.kind === 'battery' ? Number(src.initialSocPct ?? 100) : Number(src.fuelPct ?? 100),
+      endPct: r.kind === 'battery' ? Number(src.minSocPct ?? 10) : 0,
+    }));
+}
+
+function describeSource(s) {
+  if (s.kind === 'battery') return `${fmt(s.capacityWh)} Вт·год, ${s.initialSocPct ?? 100}%`;
+  if (s.kind === 'generator') return `${fmt(s.ratedW)} Вт, пального ${s.fuelPct ?? 100}%`;
+  return `${fmt(s.peakW)} Вт`;
+}
+
+// Висновок простими словами: до котрої години вистачить кожного джерела, якщо світло зникне зараз.
+function Conclusion({ estimate }) {
+  const now = new Date();
+  const usable = estimate.sources.filter((r) => r.kind !== 'solar' && Number.isFinite(runHours(r)));
+  if (!usable.length) return null;
+  const total = usable.reduce((s, r) => s + runHours(r), 0);
+  const parts = usable.map((r) => `${r.name} — до ${clock(now, runHours(r))} (${hoursText(runHours(r))})`);
+  return (
+    <div className="conclusion">
+      <div className="conclusion-label">Якщо світло зникне зараз, о {now.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div className="conclusion-main">
+        {parts.map((p) => (
+          <div key={p}>{p}</div>
+        ))}
+      </div>
+      {usable.length > 1 && total < 48 && (
+        <div className="conclusion-sub">
+          Якщо використовувати джерела по черзі, разом протримаєтесь {hoursText(total)}, до {clock(now, total)}.
+        </div>
+      )}
+      {usable.some((r) => r.overloaded) && <div className="conclusion-sub">Для перевантажених джерел час указано без приладів, які доведеться вимкнути (див. нижче).</div>}
+    </div>
   );
 }
 
@@ -209,13 +256,4 @@ function duration(hours) {
 
 function fmt(n) {
   return Number(n || 0).toLocaleString('uk-UA');
-}
-
-function Num({ label, value, onChange, step = 1 }) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <input type="number" min={0} step={step} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
-    </label>
-  );
 }

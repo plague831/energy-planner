@@ -1,26 +1,28 @@
 import { useEffect, useState } from 'react';
-import { getYasnoRegions, getYasnoSchedule } from '../api.js';
+import { readChoice, saveChoice, loadSources, loadGroups, loadDay, countOutages } from '../yasno.js';
 import { useToast } from './Toasts.jsx';
 
-const STORAGE_KEY = 'energy-planner:yasno';
-
-// Завантаження графіка відключень за чергою з YASNO (Київ, Дніпро).
-// Графік підставляється у таблицю нижче, де його можна виправити вручну.
+// Вибір міста й черги YASNO (Київ, Дніпро). Графік підставляється у таблицю відключень,
+// де його можна виправити вручну. Автоматичне завантаження при відкритті сайту робить App.
 export default function OutageImport({ onApply }) {
   const [sources, setSources] = useState(null);
   // Черги різні в різних містах (у Києві 1.1–60.1, у Дніпрі 1.1–6.2), тому беремо їх з самого графіка.
   const [groups, setGroups] = useState(null);
-  const [choice, setChoice] = useState(() => ({ source: '', group: '1.1', day: 'today', ...readSaved() }));
+  const [choice, setChoice] = useState(() => ({ source: '', group: '1.1', day: 'today', auto: true, ...readChoice() }));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
   const notify = useToast();
 
+  const update = (key, value) =>
+    setChoice((current) => {
+      const next = { ...current, [key]: value };
+      saveChoice(next);
+      return next;
+    });
+
   useEffect(() => {
-    getYasnoRegions()
-      .then((regions) => {
-        const list = regions.flatMap((r) =>
-          r.dsos.map((d) => ({ value: `${r.id}:${d.id}`, label: r.dsos.length > 1 ? `${r.name}, ${d.name}` : r.name })),
-        );
+    loadSources()
+      .then((list) => {
         setSources(list);
         setChoice((c) => (list.some((s) => s.value === c.source) ? c : { ...c, source: list[0]?.value ?? '' }));
       })
@@ -29,13 +31,11 @@ export default function OutageImport({ onApply }) {
 
   useEffect(() => {
     if (!choice.source) return;
-    const [region, dso] = choice.source.split(':');
     setGroups(null);
     let cancelled = false;
-    getYasnoSchedule(region, dso)
-      .then((schedule) => {
+    loadGroups(choice.source)
+      .then((names) => {
         if (cancelled) return;
-        const names = schedule.groups.map((g) => g.group);
         setGroups(names);
         if (names.length && !names.includes(choice.group)) update('group', names[0]);
       })
@@ -45,33 +45,15 @@ export default function OutageImport({ onApply }) {
     };
   }, [choice.source]);
 
-  const update = (key, value) => {
-    setChoice((current) => {
-      const next = { ...current, [key]: value };
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // Без збереження вибору все одно працює.
-      }
-      return next;
-    });
-  };
-
   const load = async () => {
-    const [region, dso] = choice.source.split(':');
     setBusy(true);
     setMessage(null);
+    saveChoice(choice);
     try {
-      const { groups } = await getYasnoSchedule(region, dso);
-      const day = groups.find((g) => g.group === choice.group)?.[choice.day];
-      if (!day) {
-        setMessage({ error: true, text: `YASNO не має даних для черги ${choice.group}.` });
-        notify('error', `YASNO не має даних для черги ${choice.group}`);
-        return;
-      }
+      const day = await loadDay(choice);
       const when = `${choice.day === 'today' ? 'на сьогодні' : 'на завтра'}${day.date ? ` (${formatDate(day.date)})` : ''}`;
-      if (day.status === 'ScheduleApplies' || day.status === 'NoOutages') {
-        onApply(day.outages);
+      if (day.applies) {
+        onApply(day.outages, { day: choice.day, date: day.date, possible: day.possible });
         const parts = [`Черга ${choice.group} ${when}: ${countOutages(day.outages.length)}.`];
         if (day.possible.length) parts.push(`Можливі додаткові відключення: ${day.possible.map((o) => `${o.from}–${o.to}`).join(', ')}.`);
         setMessage({ text: parts.join(' ') });
@@ -90,7 +72,6 @@ export default function OutageImport({ onApply }) {
 
   return (
     <div className="outage-import">
-      <p className="hint">Для Києва і Дніпра графік можна завантажити з YASNO, для інших областей введіть його вручну.</p>
       <div className="import-row">
         <label className="field">
           <span>Місто</span>
@@ -123,30 +104,18 @@ export default function OutageImport({ onApply }) {
           {busy ? 'Завантажую…' : 'Завантажити з YASNO'}
         </button>
       </div>
+      <label className="checkbox auto-toggle">
+        <input type="checkbox" checked={choice.auto !== false} onChange={(e) => update('auto', e.target.checked)} />
+        Автоматично оновлювати графік при кожному відкритті сайту
+      </label>
       {message && <p className={message.error ? 'error' : 'import-message'}>{message.text}</p>}
     </div>
   );
 }
 
-function readSaved() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? {};
-  } catch {
-    return {};
-  }
-}
-
 function formatDate(iso) {
   const [, month, day] = iso.split('-');
   return `${day}.${month}`;
-}
-
-function countOutages(n) {
-  if (n === 0) return 'відключень не заплановано';
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  const word = mod10 >= 1 && mod10 <= 4 && !(mod100 >= 11 && mod100 <= 14) ? 'відключення' : 'відключень';
-  return `${n} ${word}`;
 }
 
 function lowerFirst(text) {
