@@ -73,6 +73,7 @@ export async function planDay(household, algorithm, { day = 'today', scheduleOut
     socBySlot: capacity ? result.nominal.trace.map((t) => (t.energyWh / capacity) * 100) : [],
     fuelBySlot: result.nominal.trace.map((t) => t.fuelPct),
     trace: result.nominal.trace,
+    result,
   });
   return { result, changed };
 }
@@ -117,4 +118,10 @@ function describeChanges(before, after, nowSlot) {
     }
   }
   return { at: `${String(Math.floor((nowSlot * SLOT_MIN) / 60)).padStart(2, '0')}:${String((nowSlot * SLOT_MIN) % 60).padStart(2, '0')}`, moved };
+}
+
+// Останній збережений план на сьогодні — для роботи без зв'язку з сервером.
+export function lastSavedResult(day = 'today') {
+  if (day !== 'today') return null;
+  return readLastPlan()?.result ?? null;
 }

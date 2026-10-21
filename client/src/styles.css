@@ -1952,3 +1952,27 @@ details.faq p {
   font-size: 14px;
   color: var(--muted);
 }
+
+.notify-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.notify-settings .hint {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+}
+
+.notify-before {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notify-before select {
+  height: 32px;
+}

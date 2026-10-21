@@ -16,7 +16,7 @@ const nowSlotOf = () => {
 
 // Головний екран для звичайного користувача: що зі світлом зараз, скільки до відключення,
 // що з зарядом станції і що робити далі. Усе технічне — у розділі «Детально».
-export default function Today({ household, actual, actualNote, onReport, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, onSetCharge, hasQueue, onSelectDay, onExportCalendar }) {
+export default function Today({ household, actual, actualNote, onReport, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, onSetCharge, hasQueue, onSelectDay, onExportCalendar, notifySettings, onNotifyChange }) {
   const [now, setNow] = useState(nowSlotOf);
   useEffect(() => {
     const id = setInterval(() => setNow(nowSlotOf()), 30_000);
@@ -87,6 +87,7 @@ export default function Today({ household, actual, actualNote, onReport, result,
                 🖨️ Друкувати
               </button>
             </div>
+            {!isTomorrow && notifySettings && <NotifySettings settings={notifySettings} onChange={onNotifyChange} />}
           </>
         )}
       </section>
@@ -139,6 +140,30 @@ function PrepAdvice({ household, result, now }) {
             : `За планом під час відключення заряд опуститься до ${pct(lowest)}%, тож запасу вистачить.`}
         </div>
       </div>
+    </div>
+  );
+}
+
+function NotifySettings({ settings, onChange }) {
+  return (
+    <div className="notify-settings no-print">
+      <label className="checkbox">
+        <input type="checkbox" checked={settings.enabled} onChange={(e) => onChange({ ...settings, enabled: e.target.checked })} />
+        🔔 Нагадувати про відключення і дії з плану
+      </label>
+      {settings.enabled && (
+        <label className="notify-before">
+          за
+          <select value={settings.minutesBefore} onChange={(e) => onChange({ ...settings, minutesBefore: Number(e.target.value) })}>
+            {[0, 5, 15, 30, 60].map((m) => (
+              <option key={m} value={m}>
+                {m === 0 ? 'у момент події' : `${m} хв`}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {settings.enabled && <p className="hint">Сповіщення приходять, поки сайт відкритий (можна у фоновій вкладці або як встановлений застосунок).</p>}
     </div>
   );
 }

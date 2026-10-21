@@ -1,0 +1,16 @@
+{
+  "name": "Планувальник енергоспоживання",
+  "short_name": "Енергоплан",
+  "description": "План роботи приладів і зарядної станції з урахуванням графіка відключень",
+  "lang": "uk",
+  "start_url": "/#/today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#12161d",
+  "theme_color": "#1b212b",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getDefaults, getAlgorithms, buildPlan } from './api.js';
 import { readChoice, saveChoice, loadDay } from './yasno.js';
 import { migrateHousehold, withSources } from './sources.js';
-import { planDay as computePlan } from './planning.js';
+import { planDay as computePlan, lastSavedResult } from './planning.js';
 import { readEvents, addEvent, clearEvents, currentActual, applyActual } from './actual.js';
+import { readSettings, saveSettings, scheduleNotifications, requestPermission, testNotification } from './notifications.js';
 import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
@@ -149,6 +150,26 @@ export default function App() {
     return { effectiveHousehold: outages === household.outages ? household : { ...household, outages }, actualNote: note };
   }, [household, day, actual]);
 
+  // Нагадування: перепланувати щоразу, як змінився план на сьогодні або налаштування.
+  const [notifySettings, setNotifySettings] = useState(readSettings);
+  useEffect(() => {
+    if (!notifySettings.enabled || day !== 'today') scheduleNotifications(null);
+    else scheduleNotifications(result, effectiveHousehold, notifySettings);
+  }, [result, notifySettings, day]);
+
+  const updateNotify = async (next) => {
+    if (next.enabled && !notifySettings.enabled) {
+      const permission = await requestPermission();
+      if (permission !== 'granted') {
+        notify('error', permission === 'unsupported' ? 'Цей браузер не підтримує сповіщення' : 'Дозвіл на сповіщення не надано в браузері');
+        return;
+      }
+      testNotification();
+    }
+    saveSettings(next);
+    setNotifySettings(next);
+  };
+
   const reportActual = (type) => {
     const choice = readChoice();
     setActualEvents(addEvent(type, household, choice.group ? `${choice.source} ${choice.group}` : null));
@@ -171,7 +192,13 @@ export default function App() {
           }
         }
       } catch (e) {
-        if (id === planRequest.current) setError(e.message);
+        if (id !== planRequest.current) return;
+        // Без зв'язку з сервером показуємо останній збережений план на сьогодні.
+        const saved = lastSavedResult(day);
+        if (saved) {
+          setResult(saved);
+          notify('info', 'Немає зв\'язку з сервером: показано останній збережений план');
+        } else setError(e.message);
       } finally {
         if (id === planRequest.current) setBusy(false);
       }
@@ -343,6 +370,8 @@ export default function App() {
             hasQueue={hasQueue}
             onSelectDay={(day) => loadSchedule(day)}
             onExportCalendar={exportCalendar}
+            notifySettings={notifySettings}
+            onNotifyChange={updateNotify}
           />
         )}
         {route === 'home' && (
