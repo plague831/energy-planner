@@ -1,5 +1,8 @@
 import express from 'express';
 import { sourcesRouter } from './routes/sources.js';
+import { calendarRouter } from './routes/calendar.js';
+import { createCalendarStore } from './calendar/store.js';
+import { createYasnoClient } from './sources/yasno.js';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +14,7 @@ import { cabinetRouter } from './routes/households.js';
 
 // db — пул PostgreSQL. Без нього працює тільки планування без входу (/api/plan),
 // а маршрути кабінету відповідають 503.
-export function createApp({ db = null } = {}) {
+export function createApp({ db = null, calendarFile = join(dirname(fileURLToPath(import.meta.url)), '../data/calendars.json'), yasno = createYasnoClient() } = {}) {
   const app = express();
   app.use(express.json({ limit: '200kb' }));
 
@@ -27,7 +30,8 @@ export function createApp({ db = null } = {}) {
     res.json({ household: demoHousehold, weights: DEFAULT_WEIGHTS, uncertainty: DEFAULT_UNCERTAINTY });
   });
 
-  app.use('/api/sources', sourcesRouter());
+  app.use('/api/sources', sourcesRouter({ yasno }));
+  app.use('/api/calendar', calendarRouter({ store: createCalendarStore(calendarFile), yasno }));
 
   app.post('/api/plan', (req, res) => {
     const { household, algorithm = 'robust-ga', uncertainty, weights, replan } = req.body ?? {};

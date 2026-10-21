@@ -90,7 +90,7 @@ export function sliceDay(result, d) {
     fromSlot: Math.max(0, (result.fromSlot ?? 0) - from),
     schedule: result.schedule
       .filter((x) => (x.day ?? 0) === d)
-      .map((x) => ({ ...x, id: strip(x.id), ...(x.skipped ? {} : { startSlot: x.startSlot - from, endSlot: x.endSlot - from }) })),
+      .map((x) => ({ ...x, id: strip(x.id), day: 0, ...(x.skipped ? {} : { startSlot: x.startSlot - from, endSlot: x.endSlot - from }) })),
     nominal: {
       ...result.nominal,
       trace: trace.slice(from, from + T).map((t) => ({ ...t, slot: t.slot - from })),

@@ -11,3 +11,4 @@ export { plan, solve, describeSchedule, describeGenerators, ALGORITHMS } from '.
 export { batterySource, generatorSource, solarSource, estimateAutonomy, simulateBackup, solarPowerAt } from './autonomy.js';
 export { exhaustivePlan } from './algorithms/exhaustive.js';
 export { mean, sd, ci95, normalCdf, wilcoxonSignedRank } from './stats.js';
+export { planToIcs } from './ics.js';

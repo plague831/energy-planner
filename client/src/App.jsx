@@ -9,6 +9,7 @@ import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
 import { solarForecast } from './weather.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
+import { syncCalendar } from './components/CalendarPanel.jsx';
 import Autonomy from './components/Autonomy.jsx';
 import Today from './pages/Today.jsx';
 import MyHome from './pages/MyHome.jsx';
@@ -103,6 +104,13 @@ export default function App() {
 
   useEffect(() => {
     if (household) storage.set(STORAGE_KEY, JSON.stringify(household));
+  }, [household]);
+
+  // Якщо є підписка на календар, сервер отримує оновлені дані дому (з невеликою затримкою).
+  useEffect(() => {
+    if (!household) return;
+    const timer = setTimeout(() => syncCalendar(household), 2000);
+    return () => clearTimeout(timer);
   }, [household]);
 
   // Графік з YASNO на сьогодні й завтра підставляється в дані; якщо графік не діє
@@ -347,7 +355,8 @@ export default function App() {
 
   const exportCalendar = () => {
     const date = planDay?.date?.slice(0, 10) ?? localDate(planDay?.day === 'tomorrow' ? 1 : 0);
-    downloadIcs(planToIcs(result, household, date), `plan-${date}.ics`);
+    const outages = planDay?.day === 'tomorrow' ? household.outagesTomorrow ?? household.outages : effectiveHousehold.outages;
+    downloadIcs(planToIcs(result, { outages }, date), `plan-${date}.ics`);
     notify('success', 'Файл календаря збережено: відкрийте його, щоб додати нагадування');
   };
 

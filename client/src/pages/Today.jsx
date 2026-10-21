@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import ActionList from '../components/ActionList.jsx';
 import EnergyBalance from '../components/EnergyBalance.jsx';
 import PowerFlow from '../components/PowerFlow.jsx';
+import CalendarPanel from '../components/CalendarPanel.jsx';
 import { iconFor } from '../icons.js';
 
 const SLOT_MIN = 15;
@@ -91,9 +92,7 @@ export default function Today({ household, actual, actualNote, onReport, result,
             <GeneratorRules generators={result.generators ?? []} />
             <ActionList result={result} household={household} isToday={!isTomorrow} />
             <div className="plan-actions no-print">
-              <button type="button" className="secondary" onClick={onExportCalendar}>
-                🔔 Нагадування в календар
-              </button>
+              <CalendarPanel household={household} onDownload={onExportCalendar} />
               <button type="button" className="secondary" onClick={() => window.print()}>
                 🖨️ Друкувати
               </button>
