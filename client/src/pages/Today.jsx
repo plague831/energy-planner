@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ActionList from '../components/ActionList.jsx';
+import EnergyBalance from '../components/EnergyBalance.jsx';
 import { iconFor } from '../icons.js';
 
 const SLOT_MIN = 15;
@@ -88,6 +89,8 @@ export default function Today({ household, result, busy, planDay, scheduleNote, 
           </>
         )}
       </section>
+
+      {result && <EnergyBalance result={result} />}
     </div>
   );
 }
