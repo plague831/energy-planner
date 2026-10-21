@@ -53,8 +53,11 @@ export async function planDay(household, algorithm, { day = 'today' } = {}) {
       ? Object.fromEntries((household.sources ?? []).filter((s) => s.kind === 'generator').map((g) => [g.id, prev.fuelBySlot[nowSlot]]))
       : undefined,
   };
-  const fresh = await buildPlan(household, algorithm, replan);
-  const result = mergeWithPast(fresh, prev, household);
+  // Якщо попереднього плану на сьогодні немає, минулі години доби беруться з плану на всю добу,
+  // щоб діаграма й енергобаланс показували всю добу, а не лише решту.
+  const needPast = nowSlot > 0 && !(prev?.trace?.length >= nowSlot);
+  const [fresh, fullDay] = await Promise.all([buildPlan(household, algorithm, replan), needPast ? buildPlan(household, algorithm).catch(() => null) : null]);
+  const result = mergeWithPast(fresh, fullDay ? { trace: fullDay.nominal.trace } : prev, household);
 
   // Що змінилось порівняно з попереднім планом, коли змінився графік відключень.
   const changed = prev && prev.outages !== outagesKey(household) ? describeChanges(prev.schedule, result.schedule, nowSlot) : null;
