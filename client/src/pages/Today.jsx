@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ActionList from '../components/ActionList.jsx';
 import EnergyBalance from '../components/EnergyBalance.jsx';
+import PowerFlow from '../components/PowerFlow.jsx';
 import { iconFor } from '../icons.js';
 
 const SLOT_MIN = 15;
@@ -65,6 +66,16 @@ export default function Today({ household, actual, actualNote, onReport, result,
       )}
 
       {!isTomorrow && <PowerStatus household={household} result={result} now={now} onSetCharge={onSetCharge} actual={actual} actualNote={actualNote} onReport={onReport} />}
+
+      {!isTomorrow && result && (
+        <PowerFlow
+          trace={result.nominal.trace}
+          slot={now}
+          household={household}
+          hasGenerator={(household.sources ?? []).some((s) => s.kind === 'generator')}
+          hasSolar={(household.sources ?? []).some((s) => s.kind === 'solar')}
+        />
+      )}
 
       <section className="card">
         <h2>

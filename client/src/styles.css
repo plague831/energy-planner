@@ -1976,3 +1976,67 @@ details.faq p {
 .notify-before select {
   height: 32px;
 }
+
+/* ---------- Енергія зараз ---------- */
+
+.power-flow svg {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.flow-line {
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.flow-line.active {
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-dasharray: 6 6;
+  animation: flow-dash 1s linear infinite;
+}
+
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-line.active {
+    animation: none;
+    stroke-dasharray: none;
+  }
+}
+
+.flow-label {
+  fill: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 4px;
+}
+
+.flow-node circle {
+  fill: var(--bg);
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.flow-node.off circle {
+  stroke-dasharray: 3 3;
+  opacity: 0.6;
+}
+
+.flow-icon {
+  font-size: 20px;
+}
+
+.flow-caption {
+  fill: var(--muted);
+  font-size: 11px;
+}
