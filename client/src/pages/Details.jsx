@@ -2,6 +2,7 @@ import Timeline from '../components/Timeline.jsx';
 import Metrics from '../components/Metrics.jsx';
 import Comparison from '../components/Comparison.jsx';
 import { summarize, eventsToCsv } from '../actual.js';
+import DailyHistory from '../components/DailyHistory.jsx';
 
 // «Детально»: метод планування, діаграма доби, показники надійності й порівняння методів —
 // для тих, хто хоче розібратися глибше.
@@ -46,6 +47,8 @@ export default function Details({ household, result, comparison, algorithms, alg
           <Metrics result={result} />
         </section>
       )}
+
+      <DailyHistory />
 
       <Observations events={events} onClear={onClearEvents} />
 

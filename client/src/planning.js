@@ -1,5 +1,6 @@
 import { buildPlan } from './api.js';
 import { localDate } from './exportPlan.js';
+import { recordDay } from './history.js';
 
 // План на сьогодні завжди будується з поточного моменту: минуле вже не змінити.
 // Попередній план на цю ж дату зберігається, щоб знати, які прилади вже ввімкнено
@@ -75,6 +76,7 @@ export async function planDay(household, algorithm, { day = 'today', scheduleOut
     trace: full.nominal.trace,
     result: full,
   });
+  recordDay(sliceDay(full, 0), localDate(0));
   return { result: sliceDay(full, day === 'tomorrow' ? 1 : 0), changed };
 }
 
