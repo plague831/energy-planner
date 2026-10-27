@@ -2309,3 +2309,21 @@ details.faq p {
   font-weight: 400;
   font-size: 14px;
 }
+
+.work-hours {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  white-space: nowrap;
+}
+
+.work-hours-times {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.work-hours-times input {
+  width: 110px;
+}

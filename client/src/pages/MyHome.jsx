@@ -14,8 +14,7 @@ const baseColumns = [
   { key: 'name', label: 'Назва' },
   { key: 'powerW', label: 'Потужність, Вт', type: 'number' },
   { key: 'priority', label: 'Пріоритет', type: 'priority' },
-  { key: 'from', label: 'Працює з', type: 'time' },
-  { key: 'to', label: 'до', type: 'time' },
+  { key: 'hours', label: 'Коли працює', render: (row, patch) => <WorkHours row={row} onChange={patch} /> },
 ];
 
 const applianceColumns = [
@@ -78,7 +77,11 @@ export default function MyHome({ household, onChange, onOutagesLoaded }) {
         <details className="more">
           <summary>Точні налаштування: потужність, час роботи, важливість</summary>
           <p className="hint">Пріоритет від 1 (неважливо) до 5 (дуже важливо): при нестачі енергії першими вимикаються менш важливі прилади.</p>
-          <h3>Працює постійно</h3>
+          <h3>Працює постійно або у певні години</h3>
+          <p className="hint">
+            Холодильник чи роутер працюють цілодобово. Години потрібні лише для того, що працює частину доби (світло ввечері, ноутбук удень): так план
+            знає, скільки енергії піде саме під час відключення.
+          </p>
           <ListEditor
             columns={baseColumns}
             rows={household.baseLoads}
@@ -117,5 +120,27 @@ function NumberField({ label, value, onChange }) {
       <span>{label}</span>
       <input type="number" min={0} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
     </label>
+  );
+}
+
+// Більшість постійних приладів (холодильник, роутер) працюють цілодобово, тож години ховаються за галочкою.
+// Години потрібні лише для того, що працює частину доби (світло ввечері, ноутбук удень): так план знає,
+// коли саме це навантаження буде і скільки заряду станції воно забере під час відключення.
+function WorkHours({ row, onChange }) {
+  const allDay = !row.from && !row.to;
+  return (
+    <div className="work-hours">
+      <label className="checkbox">
+        <input type="checkbox" checked={allDay} onChange={(e) => onChange(e.target.checked ? { from: undefined, to: undefined } : { from: '09:00', to: '18:00' })} />
+        цілодобово
+      </label>
+      {!allDay && (
+        <span className="work-hours-times">
+          <input type="time" step={900} value={row.from ?? ''} onChange={(e) => onChange({ from: e.target.value || undefined })} aria-label="Працює з" />
+          –
+          <input type="time" step={900} value={row.to ?? ''} onChange={(e) => onChange({ to: e.target.value || undefined })} aria-label="Працює до" />
+        </span>
+      )}
+    </div>
   );
 }
