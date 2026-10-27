@@ -11,6 +11,7 @@ import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import { syncCalendar } from './components/CalendarPanel.jsx';
 import Autonomy from './components/Autonomy.jsx';
+import PlanSheet from './components/PlanSheet.jsx';
 import Today from './pages/Today.jsx';
 import MyHome from './pages/MyHome.jsx';
 import Details from './pages/Details.jsx';
@@ -272,12 +273,20 @@ export default function App() {
 
   const editDraft = (next) => setDraft(JSON.stringify(next) === JSON.stringify(household) ? null : next);
 
+  // Після збереження план показується одразу у вікні, щойно буде перерахований.
+  const [sheet, setSheet] = useState('closed'); // 'closed' | 'waiting' | 'open'
   const saveDraft = () => {
     if (!draft) return;
     setHousehold(draft);
     setDraft(null);
-    notify('success', 'Зміни збережено, план перераховано');
+    setSheet('waiting');
   };
+  useEffect(() => {
+    if (sheet === 'waiting' && !busy && result) {
+      const id = setTimeout(() => setSheet((s) => (s === 'waiting' ? 'open' : s)), 700);
+      return () => clearTimeout(id);
+    }
+  }, [sheet, busy, result]);
 
   const cancelDraft = () => {
     setDraft(null);
@@ -460,6 +469,25 @@ export default function App() {
         )}
         {route === 'help' && <Help />}
       </main>
+
+      {sheet === 'waiting' && (
+        <div className="save-bar no-print" role="status">
+          <span>Зміни збережено, перераховую план…</span>
+        </div>
+      )}
+
+      {sheet === 'open' && result && (
+        <PlanSheet
+          household={effectiveHousehold}
+          result={result}
+          isToday={planDay?.day !== 'tomorrow'}
+          onClose={() => setSheet('closed')}
+          onOpenToday={() => {
+            setSheet('closed');
+            window.location.hash = '#/today';
+          }}
+        />
+      )}
 
       {draft && (
         <div className="save-bar no-print" role="status">
