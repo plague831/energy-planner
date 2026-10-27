@@ -26,7 +26,11 @@ export default function ListEditor({ columns, rows, onChange, newRow, addLabel, 
             <tr key={i}>
               {columns.map((c) => (
                 <td key={c.key} data-label={c.label}>
-                  <Field column={c} value={row[c.key]} onChange={(v) => update(i, c.key, v)} />
+                  {c.render ? (
+                    c.render(row, (patch) => onChange(rows.map((r, k) => (k === i ? { ...r, ...patch } : r))))
+                  ) : (
+                    <Field column={c} value={row[c.key]} onChange={(v) => update(i, c.key, v)} />
+                  )}
                 </td>
               ))}
               <td>

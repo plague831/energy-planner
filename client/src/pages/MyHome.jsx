@@ -1,6 +1,8 @@
 import ListEditor from '../components/ListEditor.jsx';
 import OutageImport from '../components/OutageImport.jsx';
 import DevicePicker from '../components/DevicePicker.jsx';
+import ApplianceEditor from '../components/ApplianceEditor.jsx';
+import BaseLoadEditor from '../components/BaseLoadEditor.jsx';
 import SourcesEditor from '../components/SourcesEditor.jsx';
 import { withSources } from '../sources.js';
 import { appliancePresets, baseLoadPresets } from '../presets.js';
@@ -10,24 +12,6 @@ const outageColumns = [
   { key: 'to', label: 'До', type: 'time' },
 ];
 
-const baseColumns = [
-  { key: 'name', label: 'Назва' },
-  { key: 'powerW', label: 'Потужність, Вт', type: 'number' },
-  { key: 'priority', label: 'Пріоритет', type: 'priority' },
-  { key: 'from', label: 'Працює з', type: 'time' },
-  { key: 'to', label: 'до', type: 'time' },
-];
-
-const applianceColumns = [
-  { key: 'name', label: 'Назва' },
-  { key: 'powerW', label: 'Потужність, Вт', type: 'number' },
-  { key: 'durationMin', label: 'Тривалість, хв', type: 'number', step: 15 },
-  { key: 'earliest', label: 'Не раніше', type: 'time' },
-  { key: 'latest', label: 'Закінчити до', type: 'time' },
-  { key: 'preferredStart', label: 'Бажаний старт', type: 'time' },
-  { key: 'priority', label: 'Пріоритет', type: 'priority' },
-  { key: 'allowOnBattery', label: 'Від станції', type: 'checkbox' },
-];
 
 // «Мій дім»: усе, що описує домогосподарство, у трьох кроках. Прості поля на виду,
 // точні технічні параметри — у розгорнутих блоках «Додатково».
@@ -77,19 +61,16 @@ export default function MyHome({ household, onChange, onOutagesLoaded }) {
         <DevicePicker household={household} onChange={onChange} />
         <details className="more">
           <summary>Точні налаштування: потужність, час роботи, важливість</summary>
-          <p className="hint">Пріоритет від 1 (неважливо) до 5 (дуже важливо): при нестачі енергії першими вимикаються менш важливі прилади.</p>
-          <h3>Працює постійно</h3>
-          <ListEditor
-            columns={baseColumns}
+          <h3>Працює весь час або в певні години</h3>
+          <p className="hint">Години потрібні лише для того, що працює частину доби, наприклад світло ввечері.</p>
+          <BaseLoadEditor
             rows={household.baseLoads}
             onChange={(rows) => set('baseLoads', rows)}
             newRow={(i) => ({ id: `base-${Date.now()}-${i}`, name: '', powerW: 50, priority: 3 })}
-            addLabel="Додати свій прилад"
             presets={baseLoadPresets}
           />
           <h3>Можна ввімкнути в зручний час</h3>
-          <ListEditor
-            columns={applianceColumns}
+          <ApplianceEditor
             rows={household.appliances}
             onChange={(rows) => set('appliances', rows)}
             newRow={(i) => ({
@@ -102,7 +83,6 @@ export default function MyHome({ household, onChange, onOutagesLoaded }) {
               priority: 3,
               allowOnBattery: true,
             })}
-            addLabel="Додати свій прилад"
             presets={appliancePresets}
           />
         </details>

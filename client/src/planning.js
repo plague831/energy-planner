@@ -33,6 +33,14 @@ function saveLastPlan(entry) {
 
 // «Підпис» введених людиною поточних значень: якщо вона їх змінила, довіряємо їм, а не розрахунку.
 const enteredState = (h) => JSON.stringify((h.sources ?? []).map((s) => [s.id, s.initialSocPct ?? null, s.fuelPct ?? null, s.capacityWh ?? null]));
+// «Склад» дому: які джерела й прилади є. Якщо він змінився, минулі години попереднього плану вже не відповідають
+// дійсності (наприклад, там був генератор, якого тепер немає), тож їх треба перерахувати.
+const structure = (h) =>
+  JSON.stringify({
+    sources: (h.sources ?? []).map((s) => [s.id, s.kind, s.capacityWh ?? null, s.ratedW ?? null, s.peakW ?? null]),
+    appliances: (h.appliances ?? []).map((a) => a.id),
+    baseLoads: (h.baseLoads ?? []).map((b) => [b.id, b.powerW]),
+  });
 
 // scheduleOutages — опублікований графік (без уточнень від людини), щоб «графік змінився» спрацьовувало
 // лише на зміну графіка, а не на кнопки «світло зникло / повернулось».
@@ -58,7 +66,8 @@ export async function planDay(household, algorithm, { day = 'today', scheduleOut
   };
   // Якщо попереднього плану на сьогодні немає, минулі години доби беруться з плану на весь горизонт,
   // щоб діаграма й енергобаланс показували всю добу, а не лише решту.
-  const needPast = nowSlot > 0 && !(prev?.trace?.length >= nowSlot);
+  const sameStructure = prev && prev.structure === structure(household);
+  const needPast = nowSlot > 0 && (!sameStructure || !(prev?.trace?.length >= nowSlot));
   const [fresh, fullDay] = await Promise.all([buildPlan(household, algorithm, replan), needPast ? buildPlan(household, algorithm).catch(() => null) : null]);
   const full = mergeWithPast(fresh, fullDay ? { trace: fullDay.nominal.trace } : prev, household);
 
@@ -69,6 +78,7 @@ export async function planDay(household, algorithm, { day = 'today', scheduleOut
   saveLastPlan({
     date: localDate(0),
     entered: enteredState(household),
+    structure: structure(household),
     outages: scheduleKey,
     schedule: full.schedule,
     socBySlot: capacity ? full.nominal.trace.map((t) => (t.energyWh / capacity) * 100) : [],
