@@ -1071,6 +1071,42 @@ details.more[open] > summary {
   margin-bottom: 10px;
 }
 
+/* Розкривні блоки «Точні налаштування…», «Ввести вручну…»: помітна кнопка-рядок зі стрілкою. */
+details.more > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 15px;
+  font-weight: 600;
+  list-style: none;
+}
+
+details.more > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.more > summary::before {
+  content: '▸';
+  flex: none;
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.15s;
+}
+
+details.more[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+details.more > summary:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
 .station-simple {
   margin-top: 12px;
 }
