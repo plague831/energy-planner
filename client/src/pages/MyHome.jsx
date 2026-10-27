@@ -2,6 +2,7 @@ import ListEditor from '../components/ListEditor.jsx';
 import OutageImport from '../components/OutageImport.jsx';
 import DevicePicker from '../components/DevicePicker.jsx';
 import ApplianceEditor from '../components/ApplianceEditor.jsx';
+import BaseLoadEditor from '../components/BaseLoadEditor.jsx';
 import SourcesEditor from '../components/SourcesEditor.jsx';
 import { withSources } from '../sources.js';
 import { appliancePresets, baseLoadPresets } from '../presets.js';
@@ -9,13 +10,6 @@ import { appliancePresets, baseLoadPresets } from '../presets.js';
 const outageColumns = [
   { key: 'from', label: 'З', type: 'time' },
   { key: 'to', label: 'До', type: 'time' },
-];
-
-const baseColumns = [
-  { key: 'name', label: 'Назва' },
-  { key: 'powerW', label: 'Потужність, Вт', type: 'number' },
-  { key: 'priority', label: 'Пріоритет', type: 'priority' },
-  { key: 'hours', label: 'Коли працює', render: (row, patch) => <WorkHours row={row} onChange={patch} /> },
 ];
 
 
@@ -67,18 +61,12 @@ export default function MyHome({ household, onChange, onOutagesLoaded }) {
         <DevicePicker household={household} onChange={onChange} />
         <details className="more">
           <summary>Точні налаштування: потужність, час роботи, важливість</summary>
-          <p className="hint">Пріоритет від 1 (неважливо) до 5 (дуже важливо): при нестачі енергії першими вимикаються менш важливі прилади.</p>
-          <h3>Працює постійно або у певні години</h3>
-          <p className="hint">
-            Холодильник чи роутер працюють цілодобово. Години потрібні лише для того, що працює частину доби (світло ввечері, ноутбук удень): так план
-            знає, скільки енергії піде саме під час відключення.
-          </p>
-          <ListEditor
-            columns={baseColumns}
+          <h3>Працює весь час або в певні години</h3>
+          <p className="hint">Години потрібні лише для того, що працює частину доби, наприклад світло ввечері.</p>
+          <BaseLoadEditor
             rows={household.baseLoads}
             onChange={(rows) => set('baseLoads', rows)}
             newRow={(i) => ({ id: `base-${Date.now()}-${i}`, name: '', powerW: 50, priority: 3 })}
-            addLabel="Додати свій прилад"
             presets={baseLoadPresets}
           />
           <h3>Можна ввімкнути в зручний час</h3>
@@ -109,27 +97,5 @@ function NumberField({ label, value, onChange }) {
       <span>{label}</span>
       <input type="number" min={0} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />
     </label>
-  );
-}
-
-// Більшість постійних приладів (холодильник, роутер) працюють цілодобово, тож години ховаються за галочкою.
-// Години потрібні лише для того, що працює частину доби (світло ввечері, ноутбук удень): так план знає,
-// коли саме це навантаження буде і скільки заряду станції воно забере під час відключення.
-function WorkHours({ row, onChange }) {
-  const allDay = !row.from && !row.to;
-  return (
-    <div className="work-hours">
-      <label className="checkbox">
-        <input type="checkbox" checked={allDay} onChange={(e) => onChange(e.target.checked ? { from: undefined, to: undefined } : { from: '09:00', to: '18:00' })} />
-        цілодобово
-      </label>
-      {!allDay && (
-        <span className="work-hours-times">
-          <input type="time" step={900} value={row.from ?? ''} onChange={(e) => onChange({ from: e.target.value || undefined })} aria-label="Працює з" />
-          –
-          <input type="time" step={900} value={row.to ?? ''} onChange={(e) => onChange({ to: e.target.value || undefined })} aria-label="Працює до" />
-        </span>
-      )}
-    </div>
   );
 }
