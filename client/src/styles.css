@@ -2092,3 +2092,79 @@ details.faq p {
 .balance-howto a {
   color: var(--accent);
 }
+
+/* ---------- Що можна вмикати зараз ---------- */
+
+.traffic-light {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.tl-item {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--good);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.tl-item.wait {
+  border-left-color: var(--warn);
+}
+
+.tl-item.stop {
+  border-left-color: var(--bad);
+}
+
+.tl-icon {
+  font-size: 22px;
+  text-align: center;
+}
+
+.tl-name {
+  font-weight: 600;
+}
+
+.tl-detail {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tl-verdict {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tl-item.go .tl-verdict {
+  color: var(--good);
+}
+
+.tl-item.wait .tl-verdict {
+  color: var(--warn);
+}
+
+.tl-item.stop .tl-verdict {
+  color: var(--bad);
+}
+
+@media (max-width: 560px) {
+  .tl-item {
+    grid-template-columns: 28px 1fr;
+  }
+
+  .tl-verdict {
+    grid-column: 2;
+    white-space: normal;
+  }
+}
+
+.full-plan {
+  margin-bottom: 8px;
+}

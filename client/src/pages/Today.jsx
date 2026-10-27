@@ -3,7 +3,7 @@ import ActionList from '../components/ActionList.jsx';
 import EnergyBalance from '../components/EnergyBalance.jsx';
 import PowerFlow from '../components/PowerFlow.jsx';
 import CalendarPanel from '../components/CalendarPanel.jsx';
-import { iconFor } from '../icons.js';
+import TrafficLight from '../components/TrafficLight.jsx';
 
 const SLOT_MIN = 15;
 const toSlot = (t) => {
@@ -80,24 +80,40 @@ export default function Today({ household, actual, actualNote, onReport, result,
 
       <section className="card">
         <h2>
-          План на {isTomorrow ? 'завтра' : 'сьогодні'}
-          {dateLabel ? ` (${dateLabel})` : ''}
+          {isTomorrow ? 'План на завтра' : 'Що можна вмикати зараз'}
+          {isTomorrow && dateLabel ? ` (${dateLabel})` : ''}
         </h2>
         {!result ? (
-          <p className="muted">{busy ? 'Складаю план…' : 'Додайте прилади в «Мій дім», і план з’явиться тут.'}</p>
-        ) : (
+          <p className="muted">{busy ? 'Рахую…' : 'Додайте прилади в «Мій дім», і тут з’являться підказки.'}</p>
+        ) : isTomorrow ? (
           <>
-            <PrepAdvice household={household} result={result} now={isTomorrow ? 0 : now} />
-            <NextStep result={result} now={isTomorrow ? -1 : now} />
+            <PrepAdvice household={household} result={result} now={0} />
             <GeneratorRules generators={result.generators ?? []} />
-            <ActionList result={result} household={household} isToday={!isTomorrow} />
+            <ActionList result={result} household={household} isToday={false} />
             <div className="plan-actions no-print">
               <CalendarPanel household={household} onDownload={onExportCalendar} />
               <button type="button" className="secondary" onClick={() => window.print()}>
                 🖨️ Друкувати
               </button>
             </div>
-            {!isTomorrow && notifySettings && <NotifySettings settings={notifySettings} onChange={onNotifyChange} />}
+          </>
+        ) : (
+          <>
+            <p className="hint">Чи вистачить світла або заряду станції, якщо ввімкнути прилад просто зараз, з урахуванням графіка відключень.</p>
+            <PrepAdvice household={household} result={result} now={now} />
+            <TrafficLight household={household} result={result} now={now} />
+            <GeneratorRules generators={result.generators ?? []} />
+            <details className="more full-plan">
+              <summary>📋 Увесь план на сьогодні</summary>
+              <ActionList result={result} household={household} isToday />
+            </details>
+            <div className="plan-actions no-print">
+              <CalendarPanel household={household} onDownload={onExportCalendar} />
+              <button type="button" className="secondary" onClick={() => window.print()}>
+                🖨️ Друкувати
+              </button>
+            </div>
+            {notifySettings && <NotifySettings settings={notifySettings} onChange={onNotifyChange} />}
           </>
         )}
       </section>
@@ -294,24 +310,6 @@ function ChargeCorrection({ onSetCharge }) {
         Скасувати
       </button>
     </form>
-  );
-}
-
-function NextStep({ result, now }) {
-  const next = result.schedule.filter((s) => !s.skipped && s.startSlot >= now).sort((a, b) => a.startSlot - b.startSlot)[0];
-  if (!next) return null;
-  return (
-    <div className="next-step">
-      <span className="next-icon" aria-hidden="true">
-        {iconFor(next.name)}
-      </span>
-      <div>
-        <div className="next-label">Наступне, що варто ввімкнути</div>
-        <div className="next-title">
-          {next.name} о {next.start}
-        </div>
-      </div>
-    </div>
   );
 }
 
