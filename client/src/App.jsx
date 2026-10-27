@@ -441,8 +441,9 @@ export default function App() {
         {route === 'backup' && <Autonomy household={effectiveHousehold} />}
         {route === 'details' && (
           <Details
-            household={household}
+            household={effectiveHousehold}
             result={result}
+            isToday={planDay?.day !== 'tomorrow'}
             comparison={comparison}
             algorithms={algorithms}
             algorithm={algorithm}

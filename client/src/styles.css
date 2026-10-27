@@ -2168,3 +2168,74 @@ details.faq p {
 .full-plan {
   margin-bottom: 8px;
 }
+
+.timeline .bar-label.inside {
+  fill: var(--accent-text);
+  font-weight: 600;
+}
+
+.timeline .tick.strong {
+  stroke: var(--muted);
+}
+
+.timeline .soc-area {
+  fill: var(--soc);
+  opacity: 0.12;
+}
+
+.timeline .soc-min {
+  stroke: var(--warn);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.timeline .soc-min-label {
+  fill: var(--warn);
+}
+
+.timeline .now-line line {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.timeline .now-line text {
+  fill: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.timeline-legend i {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  margin-right: 5px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+
+.lg-grid-on { background: var(--grid-on); }
+.lg-grid-off { background: var(--grid-off); }
+.lg-bar { background: var(--bar); }
+.lg-failed { background: var(--bar-failed); }
+.lg-generator { background: var(--series-2); }
+.lg-solar { background: var(--series-4); }
+.lg-soc { background: var(--soc); height: 3px !important; vertical-align: 3px !important; }
+
+.controls h2,
+.controls .hint,
+.comparison-block {
+  flex-basis: 100%;
+}
+
+.comparison-block h3 {
+  margin: 8px 0;
+}
