@@ -29,8 +29,9 @@
   color-scheme: light;
 }
 
+/* Темна тема: за налаштуванням системи, якщо людина не обрала світлу вручну, або вибрана вручну. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #12161d;
     --surface: #1b212b;
     --text: #e6e9ee;
@@ -60,6 +61,37 @@
     --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239aa5b5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #12161d;
+  --surface: #1b212b;
+  --text: #e6e9ee;
+  --muted: #9aa5b5;
+  --border: #2d3542;
+  --accent: #60a5fa;
+  --accent-text: #0b1220;
+  --grid-on: #1f3b2c;
+  --grid-off: #7c8799;
+  --outage-shade: rgba(124, 135, 153, 0.12);
+  --bar: #60a5fa;
+  --bar-failed: #f87171;
+  --soc: #4ade80;
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --flow-solar: #c98500;
+  --flow-grid: #3987e5;
+  --flow-generator: #d95926;
+  --flow-discharge: #199e70;
+  --flow-consumption: #d55181;
+  --flow-charge: #9085e9;
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%239aa5b5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  color-scheme: dark;
 }
 
 * {
@@ -955,6 +987,30 @@ button:disabled {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .brand {

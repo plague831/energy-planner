@@ -16,6 +16,7 @@ import Today from './pages/Today.jsx';
 import MyHome from './pages/MyHome.jsx';
 import Details from './pages/Details.jsx';
 import Help from './pages/Help.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
 
 const STORAGE_KEY = 'energy-planner:household';
 const ONBOARDED_KEY = 'energy-planner:onboarded';
@@ -416,13 +417,16 @@ export default function App() {
           <a className="brand" href="#/today">
             ⚡ Планувальник енергоспоживання
           </a>
-          <nav className="nav-top" aria-label="Розділи">
-            {PAGES.map((p) => (
-              <a key={p.id} href={`#/${p.id}`} className={p.id === route ? 'active' : ''} aria-current={p.id === route ? 'page' : undefined}>
-                {p.label}
-              </a>
-            ))}
-          </nav>
+          <div className="header-right">
+            <nav className="nav-top" aria-label="Розділи">
+              {PAGES.map((p) => (
+                <a key={p.id} href={`#/${p.id}`} className={p.id === route ? 'active' : ''} aria-current={p.id === route ? 'page' : undefined}>
+                  {p.label}
+                </a>
+              ))}
+            </nav>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
