@@ -2298,3 +2298,14 @@ details.faq p {
     border-radius: 14px 14px 0 0;
   }
 }
+
+.plan-notice {
+  align-items: flex-start;
+}
+
+.plan-notice ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-weight: 400;
+  font-size: 14px;
+}
