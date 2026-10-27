@@ -99,7 +99,9 @@ export default function Today({ household, actual, actualNote, onReport, result,
           </>
         ) : (
           <>
-            <p className="hint">Чи вистачить світла або заряду станції, якщо ввімкнути прилад просто зараз, з урахуванням графіка відключень.</p>
+            <p className="hint">
+              Чи вистачить світла{household.battery ? ' або заряду станції' : ''}, якщо ввімкнути прилад просто зараз, з урахуванням графіка відключень.
+            </p>
             <PrepAdvice household={household} result={result} now={now} />
             <TrafficLight household={household} result={result} now={now} />
             <GeneratorRules generators={result.generators ?? []} />
@@ -118,7 +120,7 @@ export default function Today({ household, actual, actualNote, onReport, result,
         )}
       </section>
 
-      {result && <EnergyBalance result={result} />}
+      {result && <EnergyBalance result={result} household={household} />}
     </div>
   );
 }
