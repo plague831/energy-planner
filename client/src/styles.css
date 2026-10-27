@@ -979,7 +979,7 @@ button:disabled {
 }
 
 .app-header-inner {
-  max-width: 920px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 10px 16px;
   display: flex;
@@ -996,21 +996,10 @@ button:disabled {
   margin-left: auto;
 }
 
-.theme-toggle {
-  display: inline-grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: transparent;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.theme-toggle:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+.theme-select select {
+  width: auto;
+  padding: 6px 30px 6px 10px;
+  font-size: 14px;
 }
 
 .brand {
@@ -1033,7 +1022,7 @@ button:disabled {
 }
 
 .nav-top a {
-  padding: 6px 10px;
+  padding: 6px 8px;
   font-size: 14px;
 }
 

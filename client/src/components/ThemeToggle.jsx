@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 
-// Перемикач теми: як у системі → світла → темна. Вибір зберігається в localStorage,
+// Вибір теми: як у системі, світла або темна. Вибір зберігається в localStorage,
 // а index.html застосовує його ще до першого малювання, щоб сторінка не блимала.
 const MODES = [
-  ['system', '🖥️', 'Тема як у системі'],
-  ['light', '☀️', 'Світла тема'],
-  ['dark', '🌙', 'Темна тема'],
+  ['system', '🖥️', 'Системна'],
+  ['light', '☀️', 'Світла'],
+  ['dark', '🌙', 'Темна'],
 ];
 const KEY = 'theme';
 
@@ -33,18 +33,15 @@ export default function ThemeToggle() {
     }
   }, [mode]);
 
-  const index = MODES.findIndex(([m]) => m === mode);
-  const [, icon, label] = MODES[index];
-  const [, , nextLabel] = MODES[(index + 1) % MODES.length];
   return (
-    <button
-      type="button"
-      className="theme-toggle"
-      onClick={() => setMode(MODES[(index + 1) % MODES.length][0])}
-      title={`${label}. Натисніть: ${nextLabel.toLowerCase()}`}
-      aria-label={`${label}. Змінити тему`}
-    >
-      <span aria-hidden="true">{icon}</span>
-    </button>
+    <label className="theme-select">
+      <select value={mode} onChange={(e) => setMode(e.target.value)} aria-label="Тема оформлення">
+        {MODES.map(([m, icon, label]) => (
+          <option key={m} value={m}>
+            {icon} {label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
