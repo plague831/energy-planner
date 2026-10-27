@@ -2327,3 +2327,121 @@ details.faq p {
 .work-hours-times input {
   width: 110px;
 }
+
+/* ---------- Прилади, які можна ввімкнути в зручний час ---------- */
+
+.appliance-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.ae-head,
+.ae-main {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 110px 100px 120px 140px;
+  gap: 8px;
+  align-items: center;
+}
+
+.ae-head {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ae-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ae-name input,
+.ae-field input {
+  width: 100%;
+  min-width: 0;
+}
+
+.ae-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.ae-actions .icon-button {
+  white-space: nowrap;
+}
+
+.ae-mobile-label {
+  display: none;
+}
+
+.ae-row.expanded {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.ae-more {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.ae-battery {
+  grid-column: 1 / -1;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .ae-head {
+    display: none;
+  }
+
+  .ae-row {
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+  }
+
+  .ae-main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .ae-row,
+  .ae-field {
+    min-width: 0;
+  }
+
+  .ae-more {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .ae-more .field:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .ae-name {
+    grid-column: 1 / -1;
+  }
+
+  .ae-field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .ae-mobile-label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .ae-actions {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+  }
+}

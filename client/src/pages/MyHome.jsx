@@ -1,6 +1,7 @@
 import ListEditor from '../components/ListEditor.jsx';
 import OutageImport from '../components/OutageImport.jsx';
 import DevicePicker from '../components/DevicePicker.jsx';
+import ApplianceEditor from '../components/ApplianceEditor.jsx';
 import SourcesEditor from '../components/SourcesEditor.jsx';
 import { withSources } from '../sources.js';
 import { appliancePresets, baseLoadPresets } from '../presets.js';
@@ -17,16 +18,6 @@ const baseColumns = [
   { key: 'hours', label: 'Коли працює', render: (row, patch) => <WorkHours row={row} onChange={patch} /> },
 ];
 
-const applianceColumns = [
-  { key: 'name', label: 'Назва' },
-  { key: 'powerW', label: 'Потужність, Вт', type: 'number' },
-  { key: 'durationMin', label: 'Тривалість, хв', type: 'number', step: 15 },
-  { key: 'earliest', label: 'Не раніше', type: 'time' },
-  { key: 'latest', label: 'Закінчити до', type: 'time' },
-  { key: 'preferredStart', label: 'Бажаний старт', type: 'time' },
-  { key: 'priority', label: 'Пріоритет', type: 'priority' },
-  { key: 'allowOnBattery', label: 'Від станції', type: 'checkbox' },
-];
 
 // «Мій дім»: усе, що описує домогосподарство, у трьох кроках. Прості поля на виду,
 // точні технічні параметри — у розгорнутих блоках «Додатково».
@@ -91,8 +82,7 @@ export default function MyHome({ household, onChange, onOutagesLoaded }) {
             presets={baseLoadPresets}
           />
           <h3>Можна ввімкнути в зручний час</h3>
-          <ListEditor
-            columns={applianceColumns}
+          <ApplianceEditor
             rows={household.appliances}
             onChange={(rows) => set('appliances', rows)}
             newRow={(i) => ({
@@ -105,7 +95,6 @@ export default function MyHome({ household, onChange, onOutagesLoaded }) {
               priority: 3,
               allowOnBattery: true,
             })}
-            addLabel="Додати свій прилад"
             presets={appliancePresets}
           />
         </details>
