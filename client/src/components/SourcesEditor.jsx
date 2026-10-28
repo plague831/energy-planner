@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { SOURCE_KINDS, newSource } from '../sources.js';
 import { stationPresets } from '../presets.js';
-import { CITIES, solarForecast } from '../weather.js';
+import { SOLAR_DERATE } from '@energy-planner/core/autonomy';
+import { CITIES, solarForecast, typicalSunHours, monthName, defaultCity } from '../weather.js';
+import { readChoice } from '../yasno.js';
 import { useToast } from './Toasts.jsx';
 
 // Список джерел живлення в «Мій дім»: кожне — картка з основними полями, технічні параметри станції розгортаються.
@@ -83,52 +85,64 @@ export default function SourcesEditor({ sources, onChange }) {
             <>
               <div className="grid-fields">
                 <Num label="Потужність панелей, Вт" value={s.peakW} onChange={(v) => update(s.id, { peakW: v })} />
-                {!s.forecast && <Num label="Сонячних годин за день" value={s.sunHours} step={0.5} onChange={(v) => update(s.id, { sunHours: v })} />}
-                {s.forecast && (
-                  <label className="field">
-                    <span>Місто для прогнозу</span>
-                    <select
-                      value={CITIES.findIndex((c) => c.name === s.place)}
-                      onChange={(e) => {
-                        const c = CITIES[Number(e.target.value)];
-                        if (c) update(s.id, { place: c.name, lat: c.lat, lon: c.lon });
-                      }}
-                    >
-                      {CITIES.findIndex((c) => c.name === s.place) === -1 && <option value={-1}>{s.place ?? 'Оберіть місто'}</option>}
-                      {CITIES.map((c, i) => (
-                        <option key={c.name} value={i}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
               </div>
-              <label className="checkbox">
-                <input
-                  type="checkbox"
-                  checked={Boolean(s.forecast)}
-                  onChange={(e) => update(s.id, e.target.checked ? { forecast: true, ...(s.lat ? {} : { place: CITIES[0].name, lat: CITIES[0].lat, lon: CITIES[0].lon }) } : { forecast: false })}
-                />
-                Брати сонячні години з прогнозу погоди (Open-Meteo)
-              </label>
-              {s.forecast && (
-                <div className="forecast-row">
-                  <button
-                    type="button"
-                    className="link-button"
-                    onClick={() =>
-                      navigator.geolocation?.getCurrentPosition(
-                        (p) => update(s.id, { place: 'Моє місцезнаходження', lat: Math.round(p.coords.latitude * 100) / 100, lon: Math.round(p.coords.longitude * 100) / 100 }),
-                        () => notify('error', 'Не вдалося визначити місцезнаходження'),
-                      )
-                    }
-                  >
-                    📍 Визначити моє місцезнаходження
-                  </button>
-                  <ForecastPreview lat={s.lat} lon={s.lon} />
-                </div>
-              )}
+              <SolarEstimate panel={s} />
+              <details className="more">
+                <summary>{s.forecast ? `Прогноз для: ${s.place ?? 'Київ'}. Змінити або вказати вручну` : 'Сонячні години вказано вручну'}</summary>
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={!s.forecast}
+                    onChange={(e) => {
+                      const city = s.lat ? null : defaultCity(readChoice().sourceLabel);
+                      update(s.id, e.target.checked ? { forecast: false } : { forecast: true, ...(city ? { place: city.name, lat: city.lat, lon: city.lon } : {}) });
+                    }}
+                  />
+                  Вказати сонячні години вручну
+                </label>
+                {s.forecast ? (
+                  <div className="grid-fields">
+                    <label className="field">
+                      <span>Місто для прогнозу</span>
+                      <select
+                        value={CITIES.findIndex((c) => c.name === s.place)}
+                        onChange={(e) => {
+                          const c = CITIES[Number(e.target.value)];
+                          if (c) update(s.id, { place: c.name, lat: c.lat, lon: c.lon });
+                        }}
+                      >
+                        {CITIES.findIndex((c) => c.name === s.place) === -1 && <option value={-1}>{s.place ?? 'Оберіть місто'}</option>}
+                        {CITIES.map((c, i) => (
+                          <option key={c.name} value={i}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="field forecast-row">
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() =>
+                          navigator.geolocation?.getCurrentPosition(
+                            (p) => update(s.id, { place: 'Моє місцезнаходження', lat: Math.round(p.coords.latitude * 100) / 100, lon: Math.round(p.coords.longitude * 100) / 100 }),
+                            () => notify('error', 'Не вдалося визначити місцезнаходження'),
+                          )
+                        }
+                      >
+                        📍 Визначити моє місцезнаходження
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid-fields">
+                    <Num label="Сонячних годин за день" value={s.sunHours} step={0.5} onChange={(v) => update(s.id, { sunHours: v })} />
+                  </div>
+                )}
+                <p className="hint field-note">
+                  Сонячна година — година роботи панелей на повну потужність. Прогноз погоди (Open-Meteo) враховує хмарність; вручну варто вказувати, якщо ви знаєте реальну віддачу своїх панелей.
+                </p>
+              </details>
             </>
           )}
         </div>
@@ -158,12 +172,15 @@ function Num({ label, value, onChange, step = 1 }) {
   );
 }
 
-function ForecastPreview({ lat, lon }) {
+// Скільки дадуть панелі: з прогнозу погоди, а без нього — звичайне для цієї пори року значення.
+function SolarEstimate({ panel }) {
   const [days, setDays] = useState(null);
   const [failed, setFailed] = useState(false);
+  const { forecast, lat, lon } = panel;
   useEffect(() => {
-    if (!lat || !lon) return;
+    if (!forecast || !lat || !lon) return;
     let cancelled = false;
+    setDays(null);
     setFailed(false);
     solarForecast(lat, lon)
       .then((d) => !cancelled && setDays(d))
@@ -171,10 +188,29 @@ function ForecastPreview({ lat, lon }) {
     return () => {
       cancelled = true;
     };
-  }, [lat, lon]);
-  if (failed) return <span className="muted">Прогноз зараз недоступний, використовую 3 сонячні години.</span>;
-  if (!days) return <span className="muted">Завантажую прогноз…</span>;
-  const [today, tomorrow] = Object.values(days);
-  const line = (label, d) => d && `${label}: ≈ ${String(d.sunHours).replace('.', ',')} сонячної год, хмарність ${d.cloudPct}%`;
-  return <span className="muted">{[line('сьогодні', today), line('завтра', tomorrow)].filter(Boolean).join('; ')}</span>;
+  }, [forecast, lat, lon]);
+
+  const kwh = (hours) => ((Number(panel.peakW) || 0) * hours * SOLAR_DERATE) / 1000;
+  const num = (x) => x.toLocaleString('uk-UA', { maximumFractionDigits: 1 });
+  const day = (label, hours, cloud) =>
+    `${label} ≈ ${num(hours)} год сонця${cloud !== undefined ? ` (${cloudWord(cloud)})` : ''}, це ≈ ${num(kwh(hours))} кВт·год`;
+
+  let text;
+  if (!forecast) text = `Вказано вручну: ${day('щодня', Number(panel.sunHours) || 0)}.`;
+  else if (failed || !lat) {
+    const h = typicalSunHours();
+    text = `Прогноз зараз недоступний, тому беру звичайне для ${monthName()} значення: ${day('', h).trim()}.`;
+  } else if (!days) text = 'Завантажую прогноз погоди…';
+  else {
+    const [today, tomorrow] = Object.values(days);
+    text = [today && day('Сьогодні очікується', today.sunHours, today.cloudPct), tomorrow && day('завтра', tomorrow.sunHours, tomorrow.cloudPct)].filter(Boolean).join('; ') + '.';
+  }
+  return <p className="solar-estimate">☀️ {text}</p>;
+}
+
+function cloudWord(pct) {
+  if (pct < 25) return 'ясно';
+  if (pct < 60) return 'мінлива хмарність';
+  if (pct < 85) return 'хмарно';
+  return 'похмуро';
 }

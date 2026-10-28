@@ -45,6 +45,12 @@ export default function OutageImport({ onApply }) {
     };
   }, [choice.source]);
 
+  // Назву міста запам'ятовуємо, щоб нові сонячні панелі брали прогноз погоди для нього ж.
+  useEffect(() => {
+    const label = sources?.find((s) => s.value === choice.source)?.label;
+    if (label && label !== choice.sourceLabel) update('sourceLabel', label);
+  }, [sources, choice.source]);
+
   const load = async () => {
     setBusy(true);
     setMessage(null);

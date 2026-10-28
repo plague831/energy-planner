@@ -57,3 +57,21 @@ export async function solarForecast(lat, lon) {
   }
   return days;
 }
+
+// Звичайна кількість пікових сонячних годин для України по місяцях (середня денна сума радіації
+// на горизонтальну поверхню, кВт·год/м²). Береться, коли прогноз недоступний.
+const TYPICAL_SUN_HOURS = [0.9, 1.6, 2.6, 3.7, 4.8, 5.1, 5.1, 4.4, 3.1, 1.8, 0.9, 0.7];
+const MONTHS_LOC = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+
+export function typicalSunHours(date = new Date()) {
+  return TYPICAL_SUN_HOURS[date.getMonth()];
+}
+
+export function monthName(date = new Date()) {
+  return MONTHS_LOC[date.getMonth()];
+}
+
+// Місто для прогнозу за замовчуванням: те, що обране в графіку відключень YASNO, інакше Київ.
+export function defaultCity(yasnoLabel) {
+  return CITIES.find((c) => yasnoLabel?.startsWith(c.name)) ?? CITIES[0];
+}

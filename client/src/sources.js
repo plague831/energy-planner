@@ -2,6 +2,8 @@
 // Планувальник у ядрі працює з одним акумулятором, тому всі станції для нього зводяться в одну
 // еквівалентну (ємності, потужності заряджання й інвертора додаються, заряд — середньозважений).
 // Генератори й панелі поки враховуються лише в розрахунку резервного живлення.
+import { defaultCity } from './weather.js';
+import { readChoice } from './yasno.js';
 
 export const SOURCE_KINDS = {
   battery: { icon: '🔋', label: 'Зарядна станція', add: 'Зарядна станція' },
@@ -12,12 +14,17 @@ export const SOURCE_KINDS = {
 const DEFAULTS = {
   battery: { capacityWh: 1024, initialSocPct: 70, minSocPct: 10, targetEndSocPct: 60, maxChargeW: 600, inverterMaxW: 1800 },
   generator: { ratedW: 2500, tankHoursAtHalf: 8, fuelPct: 100 },
-  solar: { peakW: 800, sunHours: 3 },
+  solar: { peakW: 800, sunHours: 3, forecast: true },
 };
 
 let counter = 0;
 export function newSource(kind, overrides = {}) {
   counter += 1;
+  // Нова панель одразу бере сонце з прогнозу погоди для міста, обраного в графіку відключень.
+  if (kind === 'solar') {
+    const city = defaultCity(readChoice().sourceLabel);
+    overrides = { place: city.name, lat: city.lat, lon: city.lon, ...overrides };
+  }
   return { id: `${kind}-${Date.now()}-${counter}`, kind, name: SOURCE_KINDS[kind].label, ...DEFAULTS[kind], ...overrides };
 }
 

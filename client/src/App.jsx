@@ -6,7 +6,7 @@ import { planDay as computePlan, lastSavedResult } from './planning.js';
 import { readEvents, addEvent, clearEvents, currentActual, applyActual } from './actual.js';
 import { readSettings, saveSettings, scheduleNotifications, requestPermission, testNotification } from './notifications.js';
 import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
-import { solarForecast } from './weather.js';
+import { solarForecast, typicalSunHours } from './weather.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import { syncCalendar } from './components/CalendarPanel.jsx';
@@ -181,8 +181,10 @@ export default function App() {
     // Сонячні години з прогнозу на конкретну добу замість введених вручну.
     const withForecast = (sources, offset) =>
       (sources ?? []).map((s) => {
-        const f = s.kind === 'solar' && s.forecast ? forecasts[`${s.lat},${s.lon}`]?.[localDate(offset)] : null;
-        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : s;
+        if (s.kind !== 'solar' || !s.forecast) return s;
+        const f = forecasts[`${s.lat},${s.lon}`]?.[localDate(offset)];
+        // Прогнозу ще немає або він недоступний: звичайне для цієї пори року значення.
+        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : { ...s, sunHours: typicalSunHours() };
       });
     const { outages, note } = applyActual(household.outages ?? [], actual);
     // План завжди на 48 год (сьогодні + завтра): якщо графік на завтра невідомий, береться сьогоднішній.
@@ -415,7 +417,8 @@ export default function App() {
       <header className="app-header no-print">
         <div className="app-header-inner">
           <a className="brand" href="#/today">
-            ⚡ Планувальник енергоспоживання
+            ⚡ <span className="brand-full">Планувальник енергоспоживання</span>
+            <span className="brand-short">Енергоплан</span>
           </a>
           <div className="header-right">
             <nav className="nav-top" aria-label="Розділи">
