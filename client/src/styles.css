@@ -1002,6 +1002,21 @@ button:disabled {
   font-size: 14px;
 }
 
+.brand-short {
+  display: none;
+}
+
+/* На телефоні повна назва не вміщається поруч із вибором теми. */
+@media (max-width: 480px) {
+  .brand-full {
+    display: none;
+  }
+
+  .brand-short {
+    display: inline;
+  }
+}
+
 .brand {
   font-weight: 700;
   color: var(--text);
@@ -2541,4 +2556,20 @@ details.faq p {
   .base-editor .ae-main {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
+}
+
+.solar-estimate {
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--flow-solar) 12%, transparent);
+  font-size: 14px;
+}
+
+.balance-shortage {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  font-size: 14px;
 }

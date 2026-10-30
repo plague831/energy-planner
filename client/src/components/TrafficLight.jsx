@@ -67,7 +67,8 @@ export function trafficLight(household, result, nowSlot) {
     const latest = toSlot(a.latest ?? '24:00');
     const duration = Math.max(1, Math.round(Number(a.durationMin) / SLOT_MIN));
     const nowCheck = checkRun(a, now, ctx);
-    const plannedLater = plan && !plan.skipped && plan.startSlot > now + 1 ? plan : null;
+    // Час із плану радимо, лише якщо прилад у цей час справді зможе відпрацювати.
+    const plannedLater = plan && !plan.skipped && plan.startSlot > now + 1 && checkRun(a, plan.startSlot, ctx).ok ? plan : null;
     const base = { id: a.id, name: a.name, icon: iconFor(a.name) };
 
     if (nowCheck.ok && !nowCheck.risky) {

@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import ActionList from '../components/ActionList.jsx';
-import EnergyBalance from '../components/EnergyBalance.jsx';
-import PowerFlow from '../components/PowerFlow.jsx';
 import CalendarPanel from '../components/CalendarPanel.jsx';
 import TrafficLight from '../components/TrafficLight.jsx';
 
@@ -68,16 +66,6 @@ export default function Today({ household, actual, actualNote, onReport, result,
 
       {!isTomorrow && <PowerStatus household={household} result={result} now={now} onSetCharge={onSetCharge} actual={actual} actualNote={actualNote} onReport={onReport} />}
 
-      {!isTomorrow && result && (
-        <PowerFlow
-          trace={result.nominal.trace}
-          slot={now}
-          household={household}
-          hasGenerator={(household.sources ?? []).some((s) => s.kind === 'generator')}
-          hasSolar={(household.sources ?? []).some((s) => s.kind === 'solar')}
-        />
-      )}
-
       <section className="card">
         <h2>
           {isTomorrow ? 'План на завтра' : 'Що можна вмикати зараз'}
@@ -120,7 +108,11 @@ export default function Today({ household, actual, actualNote, onReport, result,
         )}
       </section>
 
-      {result && <EnergyBalance result={result} household={household} />}
+      {result && !isTomorrow && (
+        <p className="hint more-link">
+          Звідки зараз живиться дім і енергобаланс доби — у <a href="#/details">«Детально»</a>.
+        </p>
+      )}
     </div>
   );
 }
@@ -149,6 +141,8 @@ function PrepAdvice({ household, result, now }) {
   const shortage = trace.slice(from, to).some((t) => t.servedW + 1 < t.demandW);
   const minSoc = household.battery.minSocPct ?? 10;
   const charging = trace.slice(start, from).some((t) => t.chargeW > 0);
+  // Станція вже має потрібний заряд: радити «зарядіть» нема чого.
+  const ready = pct(trace[Math.min(trace.length - 1, Math.floor(now))].energyWh) >= needed - 1;
   return (
     <div className={`prep-advice ${shortage ? 'warn' : ''}`}>
       <span className="next-icon" aria-hidden="true">
@@ -159,10 +153,12 @@ function PrepAdvice({ household, result, now }) {
           Підготовка до відключення о {slotTime(from)}–{slotTime(to)}
         </div>
         <div className="next-title">
-          {needed >= 99 ? 'Зарядіть станцію повністю' : `Зарядіть станцію щонайменше до ${needed}%`} до {slotTime(from)}
+          {ready
+            ? 'Станція вже заряджена достатньо, нічого робити не треба'
+            : `${needed >= 99 ? 'Зарядіть станцію повністю' : `Зарядіть станцію щонайменше до ${needed}%`} до ${slotTime(from)}`}
         </div>
         <div className="prep-detail">
-          {charging ? 'Тримайте її на зарядці, поки є світло. ' : ''}
+          {charging && !ready ? 'Тримайте її на зарядці, поки є світло. ' : ''}
           {shortage
             ? `Навіть так енергії на все відключення не вистачить: заряд впаде до ${minSoc}%, і частину приладів доведеться вимкнути.`
             : `За планом під час відключення заряд опуститься до ${pct(lowest)}%, тож запасу вистачить.`}

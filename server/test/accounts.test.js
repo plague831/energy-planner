@@ -88,8 +88,10 @@ test('домогосподарство зберігається і читаєт�
 
   let r = await api('POST', '/api/households', demo);
   assert.equal(r.status, 201);
-  const { id, updatedAt, ...saved } = r.body;
+  const { id, updatedAt, sources, ...saved } = r.body;
   assert.deepEqual(JSON.parse(JSON.stringify(saved)), JSON.parse(JSON.stringify(demo)));
+  // Старий формат (одна станція в battery) зберігається як одне джерело-станція.
+  assert.deepEqual(sources.map((s) => [s.kind, s.capacityWh]), [['battery', demo.battery.capacityWh]]);
 
   r = await api('PUT', `/api/households/${id}`, { ...demo, name: 'Дача', battery: null, appliances: demo.appliances.slice(0, 2) });
   assert.equal(r.status, 200);
@@ -99,6 +101,35 @@ test('домогосподарство зберігається і читаєт�
 
   r = await api('GET', '/api/households');
   assert.deepEqual(r.body.map((h) => [h.name, h.applianceCount]), [['Дача', 2]]);
+});
+
+test('кілька джерел живлення зберігаються і читаються без втрат', opts, async () => {
+  const api = client();
+  await api('POST', '/api/auth/register', { email: 'sources@example.com', password: 'secret123' });
+  const { battery, ...rest } = demo;
+  const sources = [
+    { id: 'b1', kind: 'battery', name: 'Станція', model: 'EcoFlow River 2 Pro', capacityWh: 768, initialSocPct: 80, minSocPct: 10, targetEndSocPct: 60, maxChargeW: 940, inverterMaxW: 800 },
+    { id: 'b2', kind: 'battery', name: 'Станція 2', capacityWh: 256, initialSocPct: 40, minSocPct: 20, targetEndSocPct: 50, maxChargeW: 300, inverterMaxW: 300 },
+    { id: 'g1', kind: 'generator', name: 'Генератор', ratedW: 2500, tankHoursAtHalf: 8.5, fuelPct: 75 },
+    { id: 's1', kind: 'solar', name: 'Панелі на балконі', peakW: 800, sunHours: 3, forecast: true, place: 'Київ', lat: 50.45, lon: 30.52 },
+    { id: 's2', kind: 'solar', name: 'Панелі на даху', peakW: 1200, sunHours: 2.5, forecast: false },
+  ];
+
+  let r = await api('POST', '/api/households', { ...rest, sources });
+  assert.equal(r.status, 201);
+  assert.deepEqual(r.body.sources, sources);
+  // Еквівалентна станція для планувальника: ємності й потужності додаються, заряд середньозважений.
+  assert.equal(r.body.battery.capacityWh, 1024);
+  assert.equal(r.body.battery.inverterMaxW, 1100);
+  assert.equal(r.body.battery.initialSocPct, 70);
+
+  r = await api('POST', `/api/households/${r.body.id}/plans`, { outages: [{ from: '18:00', to: '22:00' }] });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.generators.length, 1);
+
+  r = await api('POST', '/api/households', { ...rest, sources: [{ kind: 'wind', name: 'Вітряк' }] });
+  assert.equal(r.status, 400);
+  assert.match(r.body.error, /sources\[0\]\.kind/);
 });
 
 test('некоректне домогосподарство повертає 400 з поясненням', opts, async () => {

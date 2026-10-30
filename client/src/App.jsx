@@ -6,7 +6,7 @@ import { planDay as computePlan, lastSavedResult } from './planning.js';
 import { readEvents, addEvent, clearEvents, currentActual, applyActual } from './actual.js';
 import { readSettings, saveSettings, scheduleNotifications, requestPermission, testNotification } from './notifications.js';
 import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
-import { solarForecast } from './weather.js';
+import { solarForecast, typicalSunHours } from './weather.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import { syncCalendar } from './components/CalendarPanel.jsx';
@@ -181,8 +181,10 @@ export default function App() {
     // Сонячні години з прогнозу на конкретну добу замість введених вручну.
     const withForecast = (sources, offset) =>
       (sources ?? []).map((s) => {
-        const f = s.kind === 'solar' && s.forecast ? forecasts[`${s.lat},${s.lon}`]?.[localDate(offset)] : null;
-        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : s;
+        if (s.kind !== 'solar' || !s.forecast) return s;
+        const f = forecasts[`${s.lat},${s.lon}`]?.[localDate(offset)];
+        // Прогнозу ще немає або він недоступний: звичайне для цієї пори року значення.
+        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : { ...s, sunHours: typicalSunHours() };
       });
     const { outages, note } = applyActual(household.outages ?? [], actual);
     // План завжди на 48 год (сьогодні + завтра): якщо графік на завтра невідомий, береться сьогоднішній.
@@ -194,6 +196,21 @@ export default function App() {
     };
     return { effectiveHousehold: h, actualNote: note };
   }, [household, actual, forecasts]);
+
+  // «Резервне живлення» показує той самий заряд станції, що й «Сьогодні»: оцінку за планом на цю мить,
+  // а не число, колись введене в «Мій дім».
+  const backupHousehold = useMemo(() => {
+    const trace = result?.nominal?.trace;
+    const capacity = effectiveHousehold?.battery?.capacityWh;
+    if (!effectiveHousehold || !trace?.length || !capacity || planDay?.day === 'tomorrow') return effectiveHousehold;
+    const d = new Date();
+    const slot = Math.min(trace.length - 1, Math.floor((d.getHours() * 60 + d.getMinutes()) / 15));
+    const soc = Math.max(0, Math.min(100, Math.round((trace[slot].energyWh / capacity) * 100)));
+    return {
+      ...effectiveHousehold,
+      sources: effectiveHousehold.sources.map((s) => (s.kind === 'battery' ? { ...s, initialSocPct: soc, socFromPlan: true } : s)),
+    };
+  }, [effectiveHousehold, result, planDay]);
 
   // Нагадування: перепланувати щоразу, як змінився план на сьогодні або налаштування.
   const [notifySettings, setNotifySettings] = useState(readSettings);
@@ -415,7 +432,8 @@ export default function App() {
       <header className="app-header no-print">
         <div className="app-header-inner">
           <a className="brand" href="#/today">
-            ⚡ Планувальник енергоспоживання
+            ⚡ <span className="brand-full">Планувальник енергоспоживання</span>
+            <span className="brand-short">Енергоплан</span>
           </a>
           <div className="header-right">
             <nav className="nav-top" aria-label="Розділи">
@@ -474,7 +492,7 @@ export default function App() {
             </div>
           </>
         )}
-        {route === 'backup' && <Autonomy household={effectiveHousehold} />}
+        {route === 'backup' && <Autonomy household={backupHousehold} />}
         {route === 'details' && (
           <Details
             household={effectiveHousehold}

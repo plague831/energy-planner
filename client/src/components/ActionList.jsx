@@ -127,6 +127,18 @@ function buildEvents(result, household) {
     const onBattery = Array.from({ length: s.endSlot - s.startSlot }, (_, k) => s.startSlot + k).some((t) => outageSlots.has(t));
     const slots = Array.from({ length: s.endSlot - s.startSlot }, (_, k) => s.startSlot + k);
     const genShare = slots.filter((t) => genSlots[t]).length / slots.length;
+    // Без станції й генератора прилад, що потрапляє на відключення, не відпрацює: чесно кажемо, що сьогодні не вийде.
+    if (onBattery && !capacity && genShare === 0) {
+      const app = (household.appliances ?? []).find((a) => a.id === s.id);
+      events.push({
+        slot: s.startSlot,
+        time: s.start,
+        kind: 'appliance warn',
+        title: `Сьогодні не вийде: ${s.name}`,
+        detail: `Поки є світло, прилад уже не встигне відпрацювати${app?.latest ? ` до ${app.latest}` : ''}, а резервного живлення немає. Можна дозволити пізніший час у «Мій дім» або додати зарядну станцію.`,
+      });
+      continue;
+    }
     const source = genShare === 1 ? ', від генератора' : genShare > 0 ? ', частково від генератора' : onBattery ? ', частково від станції' : '';
     const notes = [`Працює до ${s.end}${source}.`];
     if (failed.has(s.id)) notes.push('Увага: за цим графіком прилад може не відпрацювати до кінця.');
