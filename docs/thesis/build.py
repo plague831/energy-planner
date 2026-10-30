@@ -28,11 +28,17 @@ try:
     FONT = ImageFont.truetype('LiberationSerif-Regular.ttf', 100)
 except OSError:
     FONT = None
+try:
+    import pyphen
+    HYPHEN = pyphen.Pyphen(lang='uk_UA')
+except ImportError:
+    HYPHEN = None
+SHY = '\u00ad'   # м'який перенос: Word показує дефіс, лише коли справді переносить слово
 
 BODY = '0'          # «0» у шаблоні: основний текст з відступом 1,25 см
 H1, H2 = '1', '2'
 TABLE = 'a3'        # Table Grid
-TABLE_PT = 12       # один розмір шрифту в усіх таблицях роботи (вимога керівника)
+TABLE_PT = 14       # один розмір шрифту в усіх таблицях роботи (вимога керівника)
 FIGURE_MM = 165
 CELL_MARGIN_MM = 1.0
 FIGURE_MAX_H_MM = 200
@@ -156,14 +162,14 @@ def table(doc, rows):
     t.autofit = False
     # Ширина колонки пропорційна середній довжині тексту в ній, але не менша за найдовше слово,
     # щоб слова не розривалися; разом 170 мм (ширина тексту на сторінці).
-    weights, minimum = [], []
-    for c in range(len(rows[0])):
-        texts = [re.sub(r'[`*{}^]', '', row[c]) for row in rows]
-        longest = max((w for x in texts for w in x.split()), key=word_mm, default='')
-        weights.append(max(sum(map(len, texts)) / len(texts), 4))
-        minimum.append(word_mm(longest) + 2 * CELL_MARGIN_MM + 0.6)
+    minimum = min_widths(rows)
+    if sum(minimum) > 170:
+        # широка таблиця не вміщається цілими словами: довгі слова дозволяємо переносити
+        rows = [[' '.join(soft_hyphens(w) for w in cell.split(' ')) for cell in row] for row in rows]
+        minimum = min_widths(rows)
     if sum(minimum) > 170:
         minimum = [m * 170 / sum(minimum) for m in minimum]
+    weights = [max(sum(len(row[c].replace(SHY, '')) for row in rows) / len(rows), 4) for c in range(len(rows[0]))]
     widths = [170 * w / sum(weights) for w in weights]
     for _ in range(len(widths)):
         narrow = [c for c, w in enumerate(widths) if w < minimum[c] - 1e-6]
@@ -202,6 +208,39 @@ def table(doc, rows):
     hdr.set(qn('w:val'), 'true')
     tr_pr.append(hdr)
     doc.add_paragraph(style=BODY)
+
+
+def min_widths(rows):
+    """Найменша ширина кожної колонки, мм: найширший фрагмент слова між місцями переносу плюс поля."""
+    out = []
+    for c in range(len(rows[0])):
+        pieces = []
+        for row in rows:
+            for word in re.sub(r'[`*{}^]', '', row[c]).split():
+                parts = word.split(SHY)
+                pieces += [p + '-' for p in parts[:-1]] + parts[-1:]
+        out.append(word_mm(max(pieces, key=word_mm, default='')) + 2 * CELL_MARGIN_MM + 0.6)
+    return out
+
+
+def soft_hyphens(word):
+    """Ставить м'які переноси в довге слово за правилами української мови (бібліотека pyphen)."""
+    if HYPHEN is None or len(word) < 7 or re.search(r'[`*{}^_]', word):
+        return word
+    letters = [i for i, ch in enumerate(word) if ch.isalpha()]
+    allowed = []
+    for pos in HYPHEN.positions(word):
+        left = sum(1 for i in letters if i < pos)
+        if left < 2 or len(letters) - left < 3:
+            continue
+        if pos + 1 < len(word) and word[pos] == word[pos + 1]:
+            continue    # подвоєні приголосні розділяються між собою: «ван-ня», а не «ва-ння»
+        if allowed and pos - allowed[-1] == 1:
+            continue    # не лишати одну приголосну між переносами: «від-клю», а не «відк-лю»
+        allowed.append(pos)
+    for pos in reversed(allowed):
+        word = word[:pos] + SHY + word[pos:]
+    return word
 
 
 def word_mm(word):
