@@ -1,6 +1,6 @@
 # Джерела (бібліографічні описи за ДСТУ 8302:2015)
 
-Ключі використовуються в текстах розділів у вигляді [@ключ]; скрипт `build.py` нумерує їх у порядку першої появи.
+Ключі використовуються в текстах розділів у вигляді [@ключ]; скрипт `build.py` нумерує їх у порядку першої появи в усіх розділах разом. У перелік потрапляють лише джерела, на які є посилання.
 
 - iea: Ukraine's Energy Security and the Coming Winter / International Energy Agency. Paris : IEA, 2024. URL: https://www.iea.org/reports/ukraines-energy-security-and-the-coming-winter (дата звернення: 20.10.2026).
 - dixi: Electricity outages lasted almost 2 thousand hours in 2024 / DiXi Group. 02.01.2025. URL: https://dixigroup.org/en/electricity-outages-lasted-2-thousand-hours-for-ukrainian-households-in-2024/ (дата звернення: 20.10.2026).
@@ -30,3 +30,11 @@
 - znestrumko: IT-guys from Ivano-Frankivsk launched a service in four new regions that tracks power outages. *dev.ua*. 06.12.2024. URL: https://dev.ua/en/news/znestrumko-1733466911 (дата звернення: 20.10.2026).
 - svitlobot: Українські айтівці створили новий додаток, що допомагає відстежувати відключення світла. Як працює «Світлобот». *dev.ua*. 25.06.2024. URL: https://dev.ua/news/ukrainski-aitivtsi-stvoryly-novyi-dodatok-shcho-dopomahaie-vidstezhuvaty-vidkliuchennia-svitla-yak-pratsiuie-svitlobot-1719311009 (дата звернення: 20.10.2026).
 - esp: EskomSePush: A lightbulb moment. *Financial Mail*. 06.04.2023. URL: https://www.financialmail.businessday.co.za/fm/features/2023-04-06-eskomsepush-a-lightbulb-moment/ (дата звернення: 20.10.2026).
+- homerfuel: Generator Fuel Curve Intercept Coefficient. *HOMER Pro 3.16 User Manual* / UL Solutions. URL: https://support.ul-renewables.com/homer-manual-pro/generator_fuel_curve_intercept_coefficient.html (дата звернення: 30.10.2026).
+- homercycle: Cycle Charging Strategy. *HOMER Pro 3.16 User Manual* / UL Solutions. URL: https://support.ul-renewables.com/homer-manual-pro/cycle_charging_strategy.html (дата звернення: 30.10.2026).
+- duffie: Duffie J. A., Beckman W. A., Blair N. Solar Engineering of Thermal Processes, Photovoltaics and Wind. 5th ed. Hoboken : Wiley, 2020. DOI: 10.1002/9781119540328.
+- openmeteo: Zippenfenig P. Open-Meteo.com Weather API : computer software. Zenodo, 2023. DOI: 10.5281/zenodo.7970649.
+- marler: Marler R. T., Arora J. S. The weighted sum method for multi-objective optimization: new insights. *Structural and Multidisciplinary Optimization*. 2010. Vol. 41, no. 6. P. 853–862. DOI: 10.1007/s00158-009-0460-7.
+- kleywegt: Kleywegt A. J., Shapiro A., Homem-de-Mello T. The sample average approximation method for stochastic discrete optimization. *SIAM Journal on Optimization*. 2002. Vol. 12, no. 2. P. 479–502. DOI: 10.1137/S1052623499363220.
+- rakshit: Rakshit P., Konar A., Das S. Noisy evolutionary optimization algorithms – A comprehensive survey. *Swarm and Evolutionary Computation*. 2017. Vol. 33. P. 18–45. DOI: 10.1016/j.swevo.2016.09.002.
+- eiben: Eiben A. E., Smith J. E. Introduction to Evolutionary Computing. 2nd ed. Berlin ; Heidelberg : Springer, 2015. 287 p. (Natural Computing Series). DOI: 10.1007/978-3-662-44874-8.
