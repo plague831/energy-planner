@@ -251,8 +251,10 @@ function ShortageNote({ trace, household }) {
   for (const t of trace) {
     const short = (t.demandW ?? 0) - (t.servedW ?? 0) > 1;
     const last = runs.at(-1);
-    if (short && last && last.to === t.slot) last.to = t.slot + 1;
-    else if (short) runs.push({ from: t.slot, to: t.slot + 1, past: t.past });
+    if (short && last && last.to === t.slot) {
+      last.to = t.slot + 1;
+      last.past = last.past && Boolean(t.past);
+    } else if (short) runs.push({ from: t.slot, to: t.slot + 1, past: Boolean(t.past) });
   }
   if (!runs.length) return null;
   const time = (slot) => `${String(Math.floor(slot / 4) % 24).padStart(2, '0')}:${String((slot % 4) * 15).padStart(2, '0')}`;

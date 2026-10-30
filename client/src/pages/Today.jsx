@@ -108,7 +108,7 @@ export default function Today({ household, actual, actualNote, onReport, result,
         )}
       </section>
 
-      {result && (
+      {result && !isTomorrow && (
         <p className="hint more-link">
           Звідки зараз живиться дім і енергобаланс доби — у <a href="#/details">«Детально»</a>.
         </p>
