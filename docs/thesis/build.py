@@ -1,10 +1,14 @@
-"""Збирає розділ пояснювальної записки у .docx на стилях шаблону кафедри.
+"""Збирає розділи пояснювальної записки в один .docx на стилях шаблону кафедри.
 
 Використання:
-    python3 build.py <шаблон.dotx> <розділ.md> <джерела.md> <вихід.docx>
+    python3 build.py <шаблон.dotx> <джерела.md> <вихід.docx> <розділ-1.md> [<розділ-2.md> ...]
 
 Посилання в тексті пишуться як [@ключ] або [@ключ1; @ключ2] і нумеруються
-в порядку першої появи. Перелік джерел додається в кінець файлу.
+в порядку першої появи через усі розділи. Перелік джерел (лише ті, на які є
+посилання) додається в кінець файлу. Скрипт також перевіряє, що кожен рисунок
+і кожна таблиця мають посилання в тексті, і показує джерела, на які посилань немає.
+
+Рисунок: рядок ![Рисунок 2.1 – Назва](figures/ris-2-1.png), шлях відносно файлу розділу.
 """
 import re
 import shutil
@@ -18,10 +22,26 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Mm, Pt
+from PIL import Image, ImageFont
+
+try:
+    FONT = ImageFont.truetype('LiberationSerif-Regular.ttf', 100)
+except OSError:
+    FONT = None
+try:
+    import pyphen
+    HYPHEN = pyphen.Pyphen(lang='uk_UA')
+except ImportError:
+    HYPHEN = None
+SHY = '\u00ad'   # м'який перенос: Word показує дефіс, лише коли справді переносить слово
 
 BODY = '0'          # «0» у шаблоні: основний текст з відступом 1,25 см
 H1, H2 = '1', '2'
 TABLE = 'a3'        # Table Grid
+TABLE_PT = 14       # один розмір шрифту в усіх таблицях роботи (вимога керівника)
+FIGURE_MM = 165
+CELL_MARGIN_MM = 1.0
+FIGURE_MAX_H_MM = 200
 
 
 def open_template(path):
@@ -59,23 +79,60 @@ def number_citations(text, order):
             if key not in order:
                 order.append(key)
             nums.append(order.index(key) + 1)
-        nums.sort()
-        return '[' + ', '.join(map(str, nums)) + ']'
+        return '[' + compress(sorted(set(nums))) + ']'
     return re.sub(r'\[(@[^\]]+)\]', repl, text)
 
 
+def compress(nums):
+    """[3, 4, 5, 8] -> «3–5, 8»: три і більше номерів поспіль подаються діапазоном."""
+    parts, i = [], 0
+    while i < len(nums):
+        j = i
+        while j + 1 < len(nums) and nums[j + 1] == nums[j] + 1:
+            j += 1
+        if j - i >= 2:
+            parts.append(f'{nums[i]}–{nums[j]}')
+        else:
+            parts.extend(str(n) for n in nums[i:j + 1])
+        i = j + 1
+    return ', '.join(parts)
+
+
+INDEX = re.compile(r'([_^])(\{[^}]+\}|[A-Za-zα0-9]+)')
+
+
 def add_runs(par, text, size=None, subscripts=True):
-    """Підтримує *курсив* і нижні індекси виду CVaR_α."""
+    """Підтримує *курсив*, нижні індекси CVaR_α, P_{ch}, верхні 10^{7} і `буквальний текст` (назви полів бази)."""
+    for k, chunk in enumerate(text.split('`')):
+        if k % 2:
+            run = par.add_run(chunk)
+            if size:
+                run.font.size = Pt(size)
+        else:
+            add_formatted(par, chunk, size, subscripts)
+
+
+def add_formatted(par, text, size, subscripts):
     for i, part in enumerate(re.split(r'\*([^*]+)\*', text)):
         if not part:
             continue
-        for j, piece in enumerate((re.split(r'_(\{[^}]+\}|[A-Za-zα0-9]+)', part) if subscripts else [part])):
+        pieces, pos = [], 0
+        for m in (INDEX.finditer(part) if subscripts else []):
+            if m.group(1) == '^' and not m.group(2).startswith('{'):
+                continue                      # верхній індекс лише у фігурних дужках
+            pieces.append((part[pos:m.start()], None))
+            pieces.append((m.group(2).strip('{}'), m.group(1)))
+            pos = m.end()
+        pieces.append((part[pos:], None))
+        for piece, kind in pieces:
             if not piece:
                 continue
-            run = par.add_run(piece.strip('{}') if j % 2 else piece)
+            run = par.add_run(piece)
             run.italic = bool(i % 2) or None
-            if j % 2:
+            if kind == '_':
                 run.font.subscript = True
+            elif kind == '^':
+                run.font.superscript = True
             if size:
                 run.font.size = Pt(size)
 
@@ -103,11 +160,31 @@ def table(doc, rows):
     t = doc.add_table(rows=len(rows), cols=len(rows[0]))
     t.style = doc.styles['Table Grid']
     t.autofit = False
-    ncols = len(rows[0])
-    unit = Mm(170) / (ncols + 0.5)          # ширина тексту 170 мм, перша колонка ширша
-    size = 11 if ncols > 5 else 12
+    # Ширина колонки пропорційна середній довжині тексту в ній, але не менша за найдовше слово,
+    # щоб слова не розривалися; разом 170 мм (ширина тексту на сторінці).
+    minimum = min_widths(rows)
+    if sum(minimum) > 170:
+        # широка таблиця не вміщається цілими словами: довгі слова дозволяємо переносити
+        rows = [[' '.join(soft_hyphens(w) for w in cell.split(' ')) for cell in row] for row in rows]
+        minimum = min_widths(rows)
+    if sum(minimum) > 170:
+        minimum = [m * 170 / sum(minimum) for m in minimum]
+    weights = [max(sum(len(row[c].replace(SHY, '')) for row in rows) / len(rows), 4) for c in range(len(rows[0]))]
+    widths = [170 * w / sum(weights) for w in weights]
+    for _ in range(len(widths)):
+        narrow = [c for c, w in enumerate(widths) if w < minimum[c] - 1e-6]
+        if not narrow:
+            break
+        fixed = set(c for c, w in enumerate(widths) if w <= minimum[c] + 1e-6) | set(narrow)
+        rest = [c for c in range(len(widths)) if c not in fixed]
+        for c in fixed:
+            widths[c] = minimum[c]
+        free = 170 - sum(widths[c] for c in fixed)
+        for c in rest:
+            widths[c] = free * weights[c] / sum(weights[k] for k in rest)
+    margins(t)
     for c, col in enumerate(t.columns):
-        col.width = int(unit * (1.5 if c == 0 else 1))
+        col.width = Mm(widths[c])
         for cell in col.cells:
             cell.width = col.width
     for r, row in enumerate(rows):
@@ -117,16 +194,71 @@ def table(doc, rows):
             p.paragraph_format.line_spacing = 1.0
             if r == 0:
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            add_runs(p, cell, size=size, subscripts=False)
+            # невелика таблиця не розривається між сторінками: рядки «тримаються» за наступні
+            p.paragraph_format.keep_with_next = r < len(rows) - 1
+            add_runs(p, cell, size=TABLE_PT)
             if r == 0:
                 for run in p.runs:
                     run.bold = False
+        cant_split = OxmlElement('w:cantSplit')
+        t.rows[r]._tr.get_or_add_trPr().append(cant_split)
     # повторювати шапку на кожній сторінці
     tr_pr = t.rows[0]._tr.get_or_add_trPr()
     hdr = OxmlElement('w:tblHeader')
     hdr.set(qn('w:val'), 'true')
     tr_pr.append(hdr)
     doc.add_paragraph(style=BODY)
+
+
+def min_widths(rows):
+    """Найменша ширина кожної колонки, мм: найширший фрагмент слова між місцями переносу плюс поля."""
+    out = []
+    for c in range(len(rows[0])):
+        pieces = []
+        for row in rows:
+            for word in re.sub(r'[`*{}^]', '', row[c]).split():
+                parts = word.split(SHY)
+                pieces += [p + '-' for p in parts[:-1]] + parts[-1:]
+        out.append(word_mm(max(pieces, key=word_mm, default='')) + 2 * CELL_MARGIN_MM + 0.6)
+    return out
+
+
+def soft_hyphens(word):
+    """Ставить м'які переноси в довге слово за правилами української мови (бібліотека pyphen)."""
+    if HYPHEN is None or len(word) < 7 or re.search(r'[`*{}^_]', word):
+        return word
+    letters = [i for i, ch in enumerate(word) if ch.isalpha()]
+    allowed = []
+    for pos in HYPHEN.positions(word):
+        left = sum(1 for i in letters if i < pos)
+        if left < 2 or len(letters) - left < 3:
+            continue
+        if pos + 1 < len(word) and word[pos] == word[pos + 1]:
+            continue    # подвоєні приголосні розділяються між собою: «ван-ня», а не «ва-ння»
+        if allowed and pos - allowed[-1] == 1:
+            continue    # не лишати одну приголосну між переносами: «від-клю», а не «відк-лю»
+        allowed.append(pos)
+    for pos in reversed(allowed):
+        word = word[:pos] + SHY + word[pos:]
+    return word
+
+
+def word_mm(word):
+    """Ширина слова шрифтом таблиці в мм (Liberation Serif метрично збігається з Times New Roman)."""
+    if FONT is None:
+        return len(word) * 2.1
+    return FONT.getlength(word) / 100 * TABLE_PT * 25.4 / 72
+
+
+def margins(t):
+    """Поля комірок ліворуч і праворуч по CELL_MARGIN_MM замість стандартних 1,9 мм."""
+    mar = OxmlElement('w:tblCellMar')
+    for side in ('left', 'right'):
+        el = OxmlElement(f'w:{side}')
+        el.set(qn('w:w'), str(int(CELL_MARGIN_MM / 25.4 * 1440)))
+        el.set(qn('w:type'), 'dxa')
+        mar.append(el)
+    t._tbl.tblPr.append(mar)
 
 
 def formula(doc, text, number):
@@ -140,41 +272,66 @@ def formula(doc, text, number):
     p.add_run('\t' + number)
 
 
-def build(template, chapter, sources_path, out):
+def figure(doc, image, caption):
+    p = doc.add_paragraph(style=BODY)
+    p.paragraph_format.first_line_indent = 0
+    p.paragraph_format.keep_with_next = True
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # широкий рисунок займає 165 мм, високий обмежено 200 мм заввишки, щоб він уміщався з підписом
+    with Image.open(image) as im:
+        w, h = im.size
+    p.add_run().add_picture(str(image), width=Mm(min(FIGURE_MM, FIGURE_MAX_H_MM * w / h)))
+    c = doc.add_paragraph(style=BODY)
+    c.paragraph_format.first_line_indent = 0
+    c.paragraph_format.space_after = Pt(14)
+    c.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    add_runs(c, caption)
+
+
+def build(template, sources_path, out, chapters):
     doc = open_template(template)
     sources = load_sources(sources_path)
     order = []
-    lines = Path(chapter).read_text(encoding='utf8').splitlines()
-    i = 0
+    captions, text = [], []
     first = True
-    while i < len(lines):
-        line = lines[i].rstrip()
-        if not line:
-            i += 1
-            continue
-        if line.startswith('# '):
-            heading(doc, line[2:], H1, page_break=not first)
-            first = False
-        elif line.startswith('## '):
-            heading(doc, line[3:], H2)
-        elif line.startswith('Таблиця '):
-            caption_above(doc, line)
-        elif line.startswith('|'):
-            rows = []
-            while i < len(lines) and lines[i].startswith('|'):
-                cells = [c.strip() for c in lines[i].strip().strip('|').split('|')]
-                if not all(re.fullmatch(r'-+', c) for c in cells):
-                    rows.append([number_citations(c, order) for c in cells])
+    for chapter in chapters:
+        base = Path(chapter).parent
+        lines = Path(chapter).read_text(encoding='utf8').splitlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i].rstrip()
+            if not line:
                 i += 1
-            table(doc, rows)
-            continue
-        elif re.search(r', \((\d+\.\d+)\)$', line):
-            m = re.search(r'^(.*), \((\d+\.\d+)\)$', line)
-            formula(doc, m.group(1) + ',', f'({m.group(2)})')
-        else:
-            p = doc.add_paragraph(style=BODY)
-            add_runs(p, number_citations(line, order))
-        i += 1
+                continue
+            m = re.fullmatch(r'!\[(.+)\]\((.+)\)', line)
+            if line.startswith('# '):
+                heading(doc, line[2:], H1, page_break=not first)
+                first = False
+            elif line.startswith('## '):
+                heading(doc, line[3:], H2)
+            elif m:
+                figure(doc, base / m.group(2), m.group(1))
+                captions.append(m.group(1))
+            elif line.startswith('Таблиця '):
+                caption_above(doc, line)
+                captions.append(line)
+            elif line.startswith('|'):
+                rows = []
+                while i < len(lines) and lines[i].startswith('|'):
+                    cells = [c.strip() for c in lines[i].strip().strip('|').split('|')]
+                    if not all(re.fullmatch(r'-+', c) for c in cells):
+                        rows.append([number_citations(c, order) for c in cells])
+                    i += 1
+                table(doc, rows)
+                continue
+            elif re.search(r'[,.] \((\d+\.\d+)\)$', line):
+                m = re.search(r'^(.*[,.]) \((\d+\.\d+)\)$', line)
+                formula(doc, m.group(1), f'({m.group(2)})')
+            else:
+                p = doc.add_paragraph(style=BODY)
+                add_runs(p, number_citations(line, order))
+                text.append(line)
+            i += 1
 
     heading(doc, 'ПЕРЕЛІК ДЖЕРЕЛ ПОСИЛАННЯ', H1, page_break=True).alignment = WD_ALIGN_PARAGRAPH.CENTER
     for n, key in enumerate(order, 1):
@@ -184,7 +341,22 @@ def build(template, chapter, sources_path, out):
         add_runs(p, f'{n}. {sources[key]}', subscripts=False)
     doc.save(out)
     print(f'{out}: джерел {len(order)}')
+    check(captions, '\n'.join(text), sources, order)
+
+
+def check(captions, text, sources, order):
+    """Попередження про рисунки й таблиці без посилань у тексті і про невикористані джерела."""
+    for cap in captions:
+        kind, num = re.match(r'(Рисунок|Таблиця) (\d+\.\d+)', cap).groups()
+        ref = r'рис\. ' if kind == 'Рисунок' else r'табл(\.|иц\w+) '
+        if not re.search(ref + r'(\d+\.\d+, )*' + re.escape(num) + r'\b', text):
+            print(f'Попередження: {kind.lower()} {num} не згадується в тексті')
+    unused = [k for k in sources if k not in order]
+    if unused:
+        print('Джерела без посилань (у перелік не потрапили):', ', '.join(unused))
 
 
 if __name__ == '__main__':
-    build(*sys.argv[1:5])
+    if len(sys.argv) < 5:
+        sys.exit(__doc__)
+    build(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:])
