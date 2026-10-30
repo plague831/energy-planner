@@ -42,7 +42,14 @@ export function hourlyBalance(trace) {
   return hours;
 }
 
-export default function EnergyBalance({ result }) {
+// Перелік назв через кому з «і» перед останньою: «мережа, сонце і генератор».
+const joinList = (items) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} і ${items.at(-1)}`);
+
+// household — щоб пояснення згадували лише ті джерела, які є в «Мій дім».
+export default function EnergyBalance({ result, household }) {
+  const kinds = new Set((household?.sources ?? []).map((s) => s.kind));
+  const hasStation = kinds.has('battery') || Boolean(household?.battery);
+  const ownNames = [hasStation && 'станція', kinds.has('solar') && 'сонце', kinds.has('generator') && 'генератор'].filter(Boolean);
   const [hover, setHover] = useState(null);
   const svgRef = useRef(null);
   const hours = hourlyBalance(result.nominal.trace);
@@ -65,21 +72,24 @@ export default function EnergyBalance({ result }) {
   const scale = (wh) => (wh / top) * (plotH / 2);
   const band = (W - M.left - M.right) / 24;
   const barW = Math.max(6, band - 6);
-  const visible = (list) => list.filter((s) => totals[s.key] > 0.5);
+  // Лише ті потоки, які є в цьому домі і реально присутні в плані.
+  const present = { solar: kinds.has('solar'), generator: kinds.has('generator'), discharge: hasStation, charge: hasStation, grid: true, consumption: true };
+  const visible = (list) => list.filter((s) => present[s.key] && totals[s.key] > 0.5);
 
   return (
     <section className="card energy-balance">
       <h2>Енергобаланс доби</h2>
       <p className="hint">
-        Звідки ваш дім братиме електроенергію протягом доби і на що вона піде, якщо дотримуватися плану. Тут видно, коли станція заряджається від мережі, а коли
-        сама живить прилади під час відключення, і скільки енергії за день дадуть власні джерела.
+        Звідки ваш дім братиме електроенергію протягом доби і на що вона піде, якщо дотримуватися плану.
+        {hasStation ? ' Тут видно, коли станція заряджається від мережі, а коли сама живить прилади під час відключення.' : ''}
+        {ownNames.length ? ` Видно й те, скільки енергії за день дадуть ваші власні джерела (${joinList(ownNames)}).` : ''}
       </p>
       <ul className="balance-howto">
         <li>
-          <strong>Над лінією</strong> — звідки енергія: мережа, станція, генератор, сонце.
+          <strong>Над лінією</strong> — звідки енергія: {joinList(['мережа', ...ownNames])}.
         </li>
         <li>
-          <strong>Під лінією</strong> — куди вона йде: на прилади або на заряд станції.
+          <strong>Під лінією</strong> — куди вона йде: {hasStation ? 'на прилади або на заряд станції' : 'на прилади'}.
         </li>
         <li>Кожен стовпчик — година; ті, що вже минули, бліді. Наведіть на стовпчик, щоб побачити кВт·год.</li>
         <li>
@@ -183,7 +193,13 @@ export default function EnergyBalance({ result }) {
             </div>
             <ShareBar parts={visible(SOURCES).map((s) => ({ ...s, value: totals[s.key] }))} total={supplied} />
             <p className="hint">
-              Власними джерелами (станція, сонце, генератор) покрито <strong>{Math.round(ownShare)}%</strong> енергії доби.
+              {ownNames.length ? (
+                <>
+                  Власними джерелами ({joinList(ownNames)}) покрито <strong>{Math.round(ownShare)}%</strong> енергії доби.
+                </>
+              ) : (
+                'Резервних джерел у «Мій дім» немає, тож уся енергія береться з мережі.'
+              )}
             </p>
           </div>
         </>

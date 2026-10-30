@@ -11,10 +11,12 @@ import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import { syncCalendar } from './components/CalendarPanel.jsx';
 import Autonomy from './components/Autonomy.jsx';
+import PlanSheet from './components/PlanSheet.jsx';
 import Today from './pages/Today.jsx';
 import MyHome from './pages/MyHome.jsx';
 import Details from './pages/Details.jsx';
 import Help from './pages/Help.jsx';
+import ThemeToggle from './components/ThemeToggle.jsx';
 
 const STORAGE_KEY = 'energy-planner:household';
 const ONBOARDED_KEY = 'energy-planner:onboarded';
@@ -236,6 +238,13 @@ export default function App() {
         }
       } catch (e) {
         if (id !== planRequest.current) return;
+        // Помилка в даних (наприклад, прилад не вміщується у своє вікно) — показуємо її, а не старий план.
+        if (e.status && e.status < 500) {
+          setError(e.message);
+          notify('error', `План не перераховано: ${e.message}`);
+          setSheet((s) => (s === 'waiting' ? 'closed' : s));
+          return;
+        }
         // Без зв'язку з сервером показуємо останній збережений план на сьогодні.
         const saved = lastSavedResult(day);
         if (saved) {
@@ -270,14 +279,38 @@ export default function App() {
     setDraft((d) => (d ? { ...d, ...patch } : d));
   };
 
-  const editDraft = (next) => setDraft(JSON.stringify(next) === JSON.stringify(household) ? null : next);
+  const editDraft = (next) => {
+    setSheet((s) => (s === 'notice' ? 'closed' : s));
+    setDraft(JSON.stringify(next) === JSON.stringify(household) ? null : next);
+  };
 
+  // Після збереження план не відкривається сам: людина може зберігати багато разів, і здебільшого це не впливає
+  // на найближчі години. Повідомлення з'являється лише тоді, коли зміна справді важлива зараз:
+  // змінився час приладів у найближчі 6 годин або незабаром відключення. План можна відкрити кнопкою.
+  const [sheet, setSheet] = useState('closed'); // 'closed' | 'waiting' | 'notice' | 'open'
+  const [planNotice, setPlanNotice] = useState(null);
+  const beforeSave = useRef(null);
   const saveDraft = () => {
     if (!draft) return;
+    beforeSave.current = result;
     setHousehold(draft);
     setDraft(null);
-    notify('success', 'Зміни збережено, план перераховано');
+    setSheet('waiting');
   };
+  useEffect(() => {
+    if (sheet !== 'waiting' || busy || !result || result === beforeSave.current) return;
+    const id = setTimeout(() => {
+      const notice = day === 'today' ? relevantChanges(beforeSave.current, result) : null;
+      if (notice) {
+        setPlanNotice(notice);
+        setSheet('notice');
+      } else {
+        setSheet('closed');
+        notify('success', 'Зміни збережено');
+      }
+    }, 700);
+    return () => clearTimeout(id);
+  }, [sheet, busy, result]);
 
   const cancelDraft = () => {
     setDraft(null);
@@ -384,13 +417,16 @@ export default function App() {
           <a className="brand" href="#/today">
             ⚡ Планувальник енергоспоживання
           </a>
-          <nav className="nav-top" aria-label="Розділи">
-            {PAGES.map((p) => (
-              <a key={p.id} href={`#/${p.id}`} className={p.id === route ? 'active' : ''} aria-current={p.id === route ? 'page' : undefined}>
-                {p.label}
-              </a>
-            ))}
-          </nav>
+          <div className="header-right">
+            <nav className="nav-top" aria-label="Розділи">
+              {PAGES.map((p) => (
+                <a key={p.id} href={`#/${p.id}`} className={p.id === route ? 'active' : ''} aria-current={p.id === route ? 'page' : undefined}>
+                  {p.label}
+                </a>
+              ))}
+            </nav>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
@@ -441,8 +477,9 @@ export default function App() {
         {route === 'backup' && <Autonomy household={effectiveHousehold} />}
         {route === 'details' && (
           <Details
-            household={household}
+            household={effectiveHousehold}
             result={result}
+            isToday={planDay?.day !== 'tomorrow'}
             comparison={comparison}
             algorithms={algorithms}
             algorithm={algorithm}
@@ -459,6 +496,48 @@ export default function App() {
         )}
         {route === 'help' && <Help />}
       </main>
+
+      {sheet === 'waiting' && (
+        <div className="save-bar no-print" role="status">
+          <span>Зміни збережено, перераховую план…</span>
+        </div>
+      )}
+
+      {sheet === 'notice' && planNotice && (
+        <div className="save-bar plan-notice no-print" role="status">
+          <div>
+            <strong>{planNotice.title}</strong>
+            {planNotice.lines.length > 0 && (
+              <ul>
+                {planNotice.lines.map((l) => (
+                  <li key={l}>{l}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <button type="button" onClick={() => setSheet('open')}>
+              Показати план
+            </button>
+            <button type="button" className="icon-button" onClick={() => setSheet('closed')} aria-label="Закрити">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sheet === 'open' && result && (
+        <PlanSheet
+          household={effectiveHousehold}
+          result={result}
+          isToday={planDay?.day !== 'tomorrow'}
+          onClose={() => setSheet('closed')}
+          onOpenToday={() => {
+            setSheet('closed');
+            window.location.hash = '#/today';
+          }}
+        />
+      )}
 
       {draft && (
         <div className="save-bar no-print" role="status">
@@ -486,4 +565,36 @@ export default function App() {
       </nav>
     </>
   );
+}
+
+// Чи варто показати людині, що план змінився після збереження: так, якщо змінився час приладів
+// у найближчі 6 годин або в найближчі 3 години відключення.
+function relevantChanges(before, after) {
+  if (!after?.nominal?.trace) return null;
+  const d = new Date();
+  const now = Math.floor((d.getHours() * 60 + d.getMinutes()) / 15);
+  const soonSlots = 24;
+  const prev = new Map((before?.schedule ?? []).map((x) => [x.id, x]));
+  const lines = [];
+  for (const x of after.schedule) {
+    const old = prev.get(x.id);
+    const start = x.skipped ? null : x.startSlot;
+    const oldStart = !old || old.skipped ? null : old.startSlot;
+    if (start === oldStart) continue;
+    const relevant = (start !== null && start >= now && start <= now + soonSlots) || (oldStart !== null && oldStart >= now && oldStart <= now + soonSlots);
+    if (!relevant) continue;
+    lines.push(
+      start === null
+        ? `${x.name}: сьогодні краще не вмикати`
+        : `${x.name}: тепер о ${x.start}${oldStart !== null && old ? ` (було ${old.start})` : ''}`,
+    );
+  }
+  const trace = after.nominal.trace;
+  const outageAt = trace.findIndex((t, i) => i >= now && i <= now + 12 && !t.gridOn);
+  if (!lines.length) return null;
+  const slot = (i) => `${String(Math.floor((i * 15) / 60)).padStart(2, '0')}:${String((i * 15) % 60).padStart(2, '0')}`;
+  return {
+    title: outageAt >= 0 ? (outageAt <= now ? 'Зараз відключення — план на найближчі години змінився' : `О ${slot(outageAt)} відключення — план на найближчі години змінився`) : 'План на найближчі години змінився',
+    lines: lines.slice(0, 4),
+  };
 }

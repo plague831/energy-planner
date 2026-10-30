@@ -6,12 +6,38 @@ import DailyHistory from '../components/DailyHistory.jsx';
 
 // «Детально»: метод планування, діаграма доби, показники надійності й порівняння методів —
 // для тих, хто хоче розібратися глибше.
-export default function Details({ household, result, comparison, algorithms, algorithm, onAlgorithm, busy, error, onPlan, onCompare, onReset, canReset, events = [], onClearEvents }) {
+export default function Details({ household, result, isToday = true, comparison, algorithms, algorithm, onAlgorithm, busy, error, onPlan, onCompare, onReset, canReset, events = [], onClearEvents }) {
+  const now = new Date();
+  const nowSlot = (now.getHours() * 60 + now.getMinutes()) / 15;
   return (
     <div className="page-stack">
+      {result && (
+        <section className="card">
+          <h2>Діаграма доби</h2>
+          <p className="hint">
+            Увесь план на {isToday ? 'сьогодні' : 'завтра'} на одній шкалі часу: коли відключення, коли працює кожен прилад, генератор і сонце, і як
+            змінюється заряд станції. Наведіть на смугу, щоб побачити час.
+          </p>
+          <Timeline result={result} household={household} nowSlot={isToday ? nowSlot : null} />
+        </section>
+      )}
+
+      {result && (
+        <section className="card">
+          <h2>Надійність плану</h2>
+          <p className="hint">Наскільки план витримує те, що відключення не збігаються з графіком хвилина в хвилину.</p>
+          <Metrics result={result} />
+        </section>
+      )}
+
+      <DailyHistory />
+
+      <Observations events={events} onClear={onClearEvents} />
+
       <section className="card controls">
+        <h2>Для фахівців: метод планування</h2>
         <label className="field">
-          <span>Метод планування</span>
+          <span>Метод</span>
           <select value={algorithm} onChange={(e) => onAlgorithm(e.target.value)}>
             {algorithms.map((a) => (
               <option key={a.id} value={a.id}>
@@ -28,36 +54,21 @@ export default function Details({ household, result, comparison, algorithms, alg
             Порівняти всі методи
           </button>
           <button type="button" className="secondary" onClick={onReset} disabled={busy || !canReset}>
-            Скинути до прикладу
+            Скинути дані до прикладу
           </button>
         </div>
         <p className="hint">
           За замовчуванням використовується стійкий генетичний алгоритм: він враховує, що відключення можуть початися раніше чи закінчитися пізніше за
-          графік.
+          графік. Інші методи — для порівняння.
         </p>
         {error && <p className="error">{error}</p>}
+        {comparison && (
+          <div className="comparison-block">
+            <h3>Порівняння методів</h3>
+            <Comparison rows={comparison} />
+          </div>
+        )}
       </section>
-
-      {result && (
-        <section className="card">
-          <h2>Діаграма доби</h2>
-          <p className="hint">{result.algorithmName}</p>
-          <Timeline result={result} household={household} />
-          <h3 className="timeline-title">Надійність плану</h3>
-          <Metrics result={result} />
-        </section>
-      )}
-
-      <DailyHistory />
-
-      <Observations events={events} onClear={onClearEvents} />
-
-      {comparison && (
-        <section className="card no-print">
-          <h2>Порівняння методів</h2>
-          <Comparison rows={comparison} />
-        </section>
-      )}
     </div>
   );
 }
