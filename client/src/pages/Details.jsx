@@ -3,6 +3,8 @@ import Metrics from '../components/Metrics.jsx';
 import Comparison from '../components/Comparison.jsx';
 import { summarize, eventsToCsv } from '../actual.js';
 import DailyHistory from '../components/DailyHistory.jsx';
+import PowerFlow from '../components/PowerFlow.jsx';
+import EnergyBalance from '../components/EnergyBalance.jsx';
 
 // «Детально»: метод планування, діаграма доби, показники надійності й порівняння методів —
 // для тих, хто хоче розібратися глибше.
@@ -11,6 +13,16 @@ export default function Details({ household, result, isToday = true, comparison,
   const nowSlot = (now.getHours() * 60 + now.getMinutes()) / 15;
   return (
     <div className="page-stack">
+      {result && isToday && (
+        <PowerFlow
+          trace={result.nominal.trace}
+          slot={nowSlot}
+          household={household}
+          hasGenerator={(household.sources ?? []).some((s) => s.kind === 'generator')}
+          hasSolar={(household.sources ?? []).some((s) => s.kind === 'solar')}
+        />
+      )}
+
       {result && (
         <section className="card">
           <h2>Діаграма доби</h2>
@@ -21,6 +33,8 @@ export default function Details({ household, result, isToday = true, comparison,
           <Timeline result={result} household={household} nowSlot={isToday ? nowSlot : null} />
         </section>
       )}
+
+      {result && <EnergyBalance result={result} household={household} />}
 
       {result && (
         <section className="card">

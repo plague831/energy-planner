@@ -93,7 +93,7 @@ export default function EnergyBalance({ result, household }) {
         </li>
         <li>Кожен стовпчик — година; ті, що вже минули, бліді. Наведіть на стовпчик, щоб побачити кВт·год.</li>
         <li>
-          Як це виглядало в попередні дні — в <a href="#/details">«Детально» → «Історія по днях»</a>.
+          Як це виглядало в попередні дні — нижче, в «Історії по днях».
         </li>
       </ul>
 
@@ -110,6 +110,7 @@ export default function EnergyBalance({ result, household }) {
             {totals.discharge > 0.5 && <Tile label="Віддала станція" value={kwh(totals.discharge)} />}
             {totals.shortage > 0.5 && <Tile label="Не вистачило" value={kwh(totals.shortage)} warn />}
           </div>
+          {totals.shortage > 0.5 && <ShortageNote trace={result.nominal.trace} household={household} />}
 
           <div className="chart-legend">
             {[...visible(SOURCES), ...visible(SINKS)].map((s) => (
@@ -242,4 +243,28 @@ function niceMax(v) {
   const p = 10 ** Math.floor(Math.log10(v));
   for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * p >= v) return m * p;
   return 10 * p;
+}
+
+// Пояснення до «Не вистачило»: коли саме і що через це не працюватиме.
+function ShortageNote({ trace, household }) {
+  const runs = [];
+  for (const t of trace) {
+    const short = (t.demandW ?? 0) - (t.servedW ?? 0) > 1;
+    const last = runs.at(-1);
+    if (short && last && last.to === t.slot) last.to = t.slot + 1;
+    else if (short) runs.push({ from: t.slot, to: t.slot + 1, past: t.past });
+  }
+  if (!runs.length) return null;
+  const time = (slot) => `${String(Math.floor(slot / 4) % 24).padStart(2, '0')}:${String((slot % 4) * 15).padStart(2, '0')}`;
+  const when = runs.map((r) => `${time(r.from)}–${time(r.to)}`).join(', ');
+  const allPast = runs.every((r) => r.past);
+  const hasStation = Boolean(household?.battery);
+  const cause = hasStation ? 'станції забракло заряду або потужності' : 'резервного живлення немає';
+  return (
+    <p className="balance-shortage">
+      {allPast
+        ? `⚠️ Не вистачило енергії ${when}: світла не було, а ${cause}, тож частина приладів не працювала.`
+        : `⚠️ Не вистачить енергії ${when}: світла не буде, а ${cause.replace('забракло', 'забракне')}, тож частину постійних приладів доведеться вимкнути (першими менш важливі).${hasStation ? ' Щоб цього уникнути, зарядіть станцію повністю перед відключенням і не вмикайте потужні прилади від неї.' : ''}`}
+    </p>
+  );
 }

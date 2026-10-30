@@ -197,6 +197,21 @@ export default function App() {
     return { effectiveHousehold: h, actualNote: note };
   }, [household, actual, forecasts]);
 
+  // «Резервне живлення» показує той самий заряд станції, що й «Сьогодні»: оцінку за планом на цю мить,
+  // а не число, колись введене в «Мій дім».
+  const backupHousehold = useMemo(() => {
+    const trace = result?.nominal?.trace;
+    const capacity = effectiveHousehold?.battery?.capacityWh;
+    if (!effectiveHousehold || !trace?.length || !capacity || planDay?.day === 'tomorrow') return effectiveHousehold;
+    const d = new Date();
+    const slot = Math.min(trace.length - 1, Math.floor((d.getHours() * 60 + d.getMinutes()) / 15));
+    const soc = Math.max(0, Math.min(100, Math.round((trace[slot].energyWh / capacity) * 100)));
+    return {
+      ...effectiveHousehold,
+      sources: effectiveHousehold.sources.map((s) => (s.kind === 'battery' ? { ...s, initialSocPct: soc, socFromPlan: true } : s)),
+    };
+  }, [effectiveHousehold, result, planDay]);
+
   // Нагадування: перепланувати щоразу, як змінився план на сьогодні або налаштування.
   const [notifySettings, setNotifySettings] = useState(readSettings);
   useEffect(() => {
@@ -477,7 +492,7 @@ export default function App() {
             </div>
           </>
         )}
-        {route === 'backup' && <Autonomy household={effectiveHousehold} />}
+        {route === 'backup' && <Autonomy household={backupHousehold} />}
         {route === 'details' && (
           <Details
             household={effectiveHousehold}

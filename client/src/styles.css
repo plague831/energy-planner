@@ -2565,3 +2565,11 @@ details.faq p {
   background: color-mix(in srgb, var(--flow-solar) 12%, transparent);
   font-size: 14px;
 }
+
+.balance-shortage {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  font-size: 14px;
+}

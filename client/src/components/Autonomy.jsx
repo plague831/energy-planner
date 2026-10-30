@@ -163,7 +163,7 @@ export default function Autonomy({ household }) {
 const runHours = (r) => (r.overloaded ? r.fitted?.hours : r.hours);
 
 function describeSource(s) {
-  if (s.kind === 'battery') return `${fmt(s.capacityWh)} Вт·год, ${s.initialSocPct ?? 100}%`;
+  if (s.kind === 'battery') return `${fmt(s.capacityWh)} Вт·год, ${s.socFromPlan ? '≈ ' : ''}${s.initialSocPct ?? 100}%${s.socFromPlan ? ' зараз' : ''}`;
   if (s.kind === 'generator') return `${fmt(s.ratedW)} Вт, пального ${s.fuelPct ?? 100}%`;
   return `${fmt(s.peakW)} Вт`;
 }
