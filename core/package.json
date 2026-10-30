@@ -8,7 +8,8 @@
     ".": "./src/index.js",
     "./examples": "./examples/demo-household.js",
     "./autonomy": "./src/autonomy.js",
-    "./ics": "./src/ics.js"
+    "./ics": "./src/ics.js",
+    "./sources": "./src/sources.js"
   },
   "scripts": {
     "test": "node --test test/*.test.js",
