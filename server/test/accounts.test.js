@@ -194,3 +194,25 @@ test('графік відключень, план і історія планів
   assert.equal((await api('DELETE', `/api/plans/${planId}`)).status, 204);
   assert.equal((await api('GET', `/api/plans/${planId}`)).status, 404);
 });
+
+test('підписка на календар зберігається в базі й переживає перезапуск сервера', opts, async () => {
+  const post = (body) => fetch(`${url}/api/calendar`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const { token } = await (await post({ household: { ...demoWithoutOutages, outages: [{ from: '18:00', to: '20:00' }] } })).json();
+  assert.match(token, /^[0-9a-f]{32}$/);
+
+  // Новий екземпляр сервера з тією самою базою бачить підписку.
+  const second = createApp({ db }).listen(0);
+  await new Promise((resolve) => second.once('listening', resolve));
+  try {
+    const ics = await fetch(`http://127.0.0.1:${second.address().port}/api/calendar/${token}.ics`);
+    assert.equal(ics.status, 200);
+    assert.match(await ics.text(), /BEGIN:VCALENDAR/);
+  } finally {
+    second.close();
+  }
+
+  const again = await (await post({ household: demoWithoutOutages, token })).json();
+  assert.equal(again.token, token);
+  const { rows } = await db.query('SELECT count(*)::int AS n FROM calendar_subscriptions');
+  assert.equal(rows[0].n, 1);
+});
