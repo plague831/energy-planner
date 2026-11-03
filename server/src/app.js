@@ -1,7 +1,7 @@
 import express from 'express';
 import { sourcesRouter } from './routes/sources.js';
 import { calendarRouter } from './routes/calendar.js';
-import { createCalendarStore } from './calendar/store.js';
+import { createCalendarStore, createDbCalendarStore } from './calendar/store.js';
 import { createYasnoClient } from './sources/yasno.js';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -31,7 +31,9 @@ export function createApp({ db = null, calendarFile = join(dirname(fileURLToPath
   });
 
   app.use('/api/sources', sourcesRouter({ yasno }));
-  app.use('/api/calendar', calendarRouter({ store: createCalendarStore(calendarFile), yasno }));
+  // Підписки на календар — у базі, якщо вона є (на хостингу файли між перезапусками стираються).
+  const calendarStore = db ? createDbCalendarStore(db) : createCalendarStore(calendarFile);
+  app.use('/api/calendar', calendarRouter({ store: calendarStore, yasno }));
 
   app.post('/api/plan', (req, res) => {
     const { household, algorithm = 'robust-ga', uncertainty, weights, replan } = req.body ?? {};

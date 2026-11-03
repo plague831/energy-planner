@@ -1,0 +1,8 @@
+# Сайт на Netlify: збирається лише клієнт, а запити /api/* пересилаються на сервер на Render
+# (правило в client/public/_redirects, щоб воно працювало за будь-якої «Base directory»).
+[build]
+  command = "npm run build"
+  publish = "client/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
