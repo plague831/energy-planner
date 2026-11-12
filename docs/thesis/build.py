@@ -5,7 +5,13 @@
 
 Посилання в тексті пишуться як [@ключ] або [@ключ1; @ключ2] і нумеруються
 в порядку першої появи через усі розділи. Перелік джерел (лише ті, на які є
-посилання) додається в кінець файлу. Скрипт також перевіряє, що кожен рисунок
+посилання) додається в кінець файлу.
+
+Щоб зібрати один розділ з тією самою нумерацією джерел, що й у всій записці,
+попередні розділи передаються з «+» на початку: вони лише нумерують джерела,
+а у файл не потрапляють. Наприклад, тільки розділ 2:
+    python3 build.py <шаблон.dotx> <джерела.md> <вихід.docx> +rozdil-1.md rozdil-2.md
+Тоді в переліку лише джерела розділу 2, зі своїми номерами з усієї записки. Скрипт також перевіряє, що кожен рисунок
 і кожна таблиця мають посилання в тексті, і показує джерела, на які посилань немає.
 
 Рисунок: рядок ![Рисунок 2.1 – Назва](figures/ris-2-1.png), шлях відносно файлу розділу.
@@ -296,8 +302,14 @@ def build(template, sources_path, out, chapters):
     sources = load_sources(sources_path)
     order = []
     captions, text = [], []
+    cited = set()
     first = True
     for chapter in chapters:
+        if chapter.startswith('+'):
+            for line in Path(chapter[1:]).read_text(encoding='utf8').splitlines():
+                number_citations(line, order)
+            continue
+        cited |= set(re.findall(r'@(\w+)', ' '.join(re.findall(r'\[(@[^\]]+)\]', Path(chapter).read_text(encoding='utf8')))))
         base = Path(chapter).parent
         lines = Path(chapter).read_text(encoding='utf8').splitlines()
         i = 0
@@ -337,13 +349,14 @@ def build(template, sources_path, out, chapters):
             i += 1
 
     heading(doc, 'ПЕРЕЛІК ДЖЕРЕЛ ПОСИЛАННЯ', H1, page_break=True).alignment = WD_ALIGN_PARAGRAPH.CENTER
-    for n, key in enumerate(order, 1):
+    listed = [(n, key) for n, key in enumerate(order, 1) if key in cited]
+    for n, key in listed:
         if key not in sources:
             sys.exit(f'Немає опису джерела для ключа {key}')
         p = doc.add_paragraph(style=BODY)
         add_runs(p, f'{n}. {sources[key]}', subscripts=False)
     doc.save(out)
-    print(f'{out}: джерел {len(order)}')
+    print(f'{out}: джерел {len(listed)}' + (f' (номери з {listed[0][0]} до {listed[-1][0]})' if len(listed) < len(order) else ''))
     check(captions, '\n'.join(text), sources, order)
 
 
