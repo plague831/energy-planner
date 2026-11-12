@@ -134,7 +134,7 @@ export function StationCard({ household, result, now, children }) {
             <span className="sc-dot" title="Розрахунок за планом" aria-hidden="true" />
             {name}
           </div>
-          <div className="sc-sub">{[model, `${fmt(capacity)} Вт·год`, 'за планом'].filter(Boolean).join(' · ')}</div>
+          <div className="sc-sub">{[model, `${fmt(capacity)} Вт·год`, 'розрахунок'].filter(Boolean).join(' · ')}</div>
         </div>
         <div className="sc-updated">
           Оновл. {String(updated.getHours()).padStart(2, '0')}:{String(updated.getMinutes()).padStart(2, '0')}
@@ -158,7 +158,7 @@ export function StationCard({ household, result, now, children }) {
       </div>
 
       <div className="sc-soc">
-        <span className="sc-soc-value">{Math.round(socNow)}%</span>
+        <span className="sc-soc-value">≈ {Math.round(socNow)}%</span>
         {Math.abs(delta) >= 1 && (
           <span className={`sc-soc-delta ${delta < 0 ? 'down' : 'up'}`}>
             {Math.round(socStart)}% → {Math.round(socNow)}% · {delta > 0 ? '+' : '−'}
@@ -177,16 +177,20 @@ export function StationCard({ household, result, now, children }) {
             ↓
           </span>
           <span className="sc-flow-label">Віддає</span>
-          <strong>{fmt(outW)} Вт</strong>
+          <strong>≈ {fmt(outW)} Вт</strong>
         </div>
         <div>
           <span className="sc-flow-icon in" aria-hidden="true">
             ↑
           </span>
           <span className="sc-flow-label">Заряджається</span>
-          <strong>{fmt(inW)} Вт</strong>
+          <strong>≈ {fmt(inW)} Вт</strong>
         </div>
       </div>
+      <p className="sc-disclaimer">
+        <span aria-hidden="true">ⓘ</span> Це розрахунок, а не показ самої станції: заряд і потужність пораховано за вашим списком приладів у «Мій дім» і
+        планом. Реальні значення можуть відрізнятися, тож перед важливим рішенням звіряйтеся з екраном станції.
+      </p>
       {children}
     </section>
   );
@@ -362,6 +366,10 @@ export function SolarCard({ household, result, now }) {
           </div>
         </div>
       )}
+      <p className="sc-disclaimer">
+        <span aria-hidden="true">ⓘ</span> Це розрахунок за прогнозом погоди{source === 'за вашими даними' ? ' й вашими сонячними годинами' : ''}, а не вимірювання. Реальна
+        віддача панелей залежить від хмар, кута й чистоти панелей і може помітно відрізнятися.
+      </p>
     </section>
   );
 }
