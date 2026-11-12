@@ -46,6 +46,7 @@ export function migrateHousehold(household) {
     sources.push({ ...newSource('battery'), ...household.battery, name: household.battery.model ? `Станція ${household.battery.model}` : SOURCE_KINDS.battery.label });
   }
   if (household.generator) sources.push({ ...newSource('generator'), ...household.generator });
-  if (household.solar) sources.push({ ...newSource('solar'), ...household.solar });
+  // Старі панелі мали лише введені вручну сонячні години: прогноз для них не вмикаємо без відома людини.
+  if (household.solar) sources.push({ ...newSource('solar'), forecast: false, ...household.solar });
   return withSources(household, sources);
 }

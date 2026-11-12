@@ -59,11 +59,13 @@ function planWorker() {
   return worker;
 }
 
-export const buildPlan = (household, algorithm = 'robust-ga', replan) =>
+// dropFailing (типово так): прилади, що за графіком не відпрацюють через відключення, не радяться.
+// Для порівняння методів його вимикають, щоб методи порівнювались як в експериментах.
+export const buildPlan = (household, algorithm = 'robust-ga', replan, { dropFailing = true } = {}) =>
   new Promise((resolve, reject) => {
     const id = ++nextId;
     pending.set(id, { resolve, reject });
-    planWorker().postMessage({ id, household, algorithm, replan });
+    planWorker().postMessage({ id, household, algorithm, replan, dropFailing });
   });
 
 export const getYasnoRegions = () => request('/api/sources/yasno/regions');

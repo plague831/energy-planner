@@ -130,6 +130,8 @@ function PrepAdvice({ household, result, now }) {
   const lowest = Math.min(...trace.slice(from, to).map((t) => t.energyWh));
   const shortage = trace.slice(from, to).some((t) => t.servedW + 1 < t.demandW);
   const minSoc = household.battery.minSocPct ?? 10;
+  // Нестача буває двох видів: закінчився заряд або станція не витягує потужність кількох приладів разом.
+  const outOfEnergy = shortage && lowest <= (capacity * (minSoc + 1)) / 100;
   const charging = trace.slice(start, from).some((t) => t.chargeW > 0);
   // Станція вже має потрібний заряд: радити «зарядіть» нема чого.
   const ready = pct(trace[Math.min(trace.length - 1, Math.floor(now))].energyWh) >= needed - 1;
@@ -149,9 +151,11 @@ function PrepAdvice({ household, result, now }) {
         </div>
         <div className="prep-detail">
           {charging && !ready ? 'Тримайте її на зарядці, поки є світло. ' : ''}
-          {shortage
+          {outOfEnergy
             ? `Навіть так енергії на все відключення не вистачить: заряд впаде до ${minSoc}%, і частину приладів доведеться вимкнути.`
-            : `За планом під час відключення заряд опуститься до ${pct(lowest)}%, тож запасу вистачить.`}
+            : shortage
+              ? `Заряду вистачить (опуститься до ${pct(lowest)}%), але станція не витягне всі прилади одразу: потужні прилади від неї в цей час краще не вмикати.`
+              : `За планом під час відключення заряд опуститься до ${pct(lowest)}%, тож запасу вистачить.`}
         </div>
       </div>
     </div>
