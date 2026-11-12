@@ -1,0 +1,3 @@
+# Netlify: усі запити до API йдуть на сервер на Render (status 200 — проксі, адреса в браузері не змінюється).
+# Якщо Render дав сервісу іншу адресу, замініть її тут.
+/api/*  https://energy-planner-api.onrender.com/api/:splat  200!

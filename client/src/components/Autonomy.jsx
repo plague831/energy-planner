@@ -92,9 +92,11 @@ export default function Autonomy({ household }) {
               ))}
             </ul>
           )}
-          <p className="hint">
-            Змінити або додати джерела можна в <a href="#/home">«Мій дім»</a>.
-          </p>
+          {allSources.length > 0 && (
+            <p className="hint">
+              Змінити або додати джерела можна в <a href="#/home">«Мій дім»</a>.
+            </p>
+          )}
         </div>
 
         <div>
@@ -138,7 +140,7 @@ export default function Autonomy({ household }) {
       </div>
 
       {sources.length === 0 ? (
-        <p className="muted">Відмітьте хоча б одне джерело живлення.</p>
+        <p className="muted">{allSources.length ? 'Відмітьте хоча б одне джерело живлення.' : 'Без резервного джерела під час відключення ці прилади не працюватимуть.'}</p>
       ) : consumers.length === 0 ? (
         <p className="muted">Відмітьте хоча б одного споживача.</p>
       ) : (
@@ -163,7 +165,7 @@ export default function Autonomy({ household }) {
 const runHours = (r) => (r.overloaded ? r.fitted?.hours : r.hours);
 
 function describeSource(s) {
-  if (s.kind === 'battery') return `${fmt(s.capacityWh)} Вт·год, ${s.initialSocPct ?? 100}%`;
+  if (s.kind === 'battery') return `${fmt(s.capacityWh)} Вт·год, ${s.socFromPlan ? '≈ ' : ''}${s.initialSocPct ?? 100}%${s.socFromPlan ? ' зараз' : ''}`;
   if (s.kind === 'generator') return `${fmt(s.ratedW)} Вт, пального ${s.fuelPct ?? 100}%`;
   return `${fmt(s.peakW)} Вт`;
 }
