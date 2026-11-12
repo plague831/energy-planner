@@ -263,7 +263,6 @@ export function ScheduleCard({ household, now, actual, actualNote, onReport }) {
       {!next && <p className="muted sch-note">Сьогодні далі змін за графіком немає.</p>}
       {actualNote && <p className="actual-note">{actualNote}</p>}
       <div className="report-buttons">
-        <span className="muted">Насправді інакше?</span>
         {current?.off ? (
           <button type="button" className="secondary" onClick={() => onReport('on')}>
             💡 Світло вже є
