@@ -184,7 +184,7 @@ export default function App() {
         if (s.kind !== 'solar' || !s.forecast) return s;
         const f = forecasts[`${s.lat},${s.lon}`]?.[localDate(offset)];
         // Прогнозу ще немає або він недоступний: звичайне для цієї пори року значення.
-        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : { ...s, sunHours: typicalSunHours() };
+        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset, cloudPct: f.cloudPct } : { ...s, sunHours: typicalSunHours(), typical: true };
       });
     const { outages, note } = applyActual(household.outages ?? [], actual);
     // План завжди на 48 год (сьогодні + завтра): якщо графік на завтра невідомий, береться сьогоднішній.
@@ -397,12 +397,6 @@ export default function App() {
     notify('info', 'Дані замінено демонстраційним прикладом');
   };
 
-  // Людина вказує фактичний заряд станцій зараз — план на решту дня перебудовується від нього.
-  const setCurrentCharge = (pct) => {
-    setHousehold((h) => withSources(h, (h.sources ?? []).map((s) => (s.kind === 'battery' ? { ...s, initialSocPct: pct } : s))));
-    notify('success', `Заряд ${pct}% враховано, план перебудовано`);
-  };
-
   const exportCalendar = () => {
     const date = planDay?.date?.slice(0, 10) ?? localDate(planDay?.day === 'tomorrow' ? 1 : 0);
     const outages = planDay?.day === 'tomorrow' ? household.outagesTomorrow ?? household.outages : effectiveHousehold.outages;
@@ -465,7 +459,6 @@ export default function App() {
             scheduleNote={scheduleNote}
             replanNote={replanNote}
             onDismissReplan={() => setReplanNote(null)}
-            onSetCharge={setCurrentCharge}
             hasQueue={hasQueue}
             onSelectDay={(day) => loadSchedule(day)}
             onExportCalendar={exportCalendar}
