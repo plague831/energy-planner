@@ -5,11 +5,11 @@ import { migrateHousehold, withSources } from './sources.js';
 import { planDay as computePlan, lastSavedResult } from './planning.js';
 import { readEvents, addEvent, clearEvents, currentActual, applyActual } from './actual.js';
 import { readSettings, saveSettings, scheduleNotifications, requestPermission, testNotification } from './notifications.js';
-import { planToIcs, downloadIcs, localDate } from './exportPlan.js';
+import { localDate } from './exportPlan.js';
 import { solarForecast, typicalSunHours } from './weather.js';
 import { useToast } from './components/Toasts.jsx';
 import Onboarding from './components/Onboarding.jsx';
-import { syncCalendar } from './components/CalendarPanel.jsx';
+import { syncCalendar } from './calendarSync.js';
 import Autonomy from './components/Autonomy.jsx';
 import PlanSheet from './components/PlanSheet.jsx';
 import Today from './pages/Today.jsx';
@@ -397,13 +397,6 @@ export default function App() {
     notify('info', 'Дані замінено демонстраційним прикладом');
   };
 
-  const exportCalendar = () => {
-    const date = planDay?.date?.slice(0, 10) ?? localDate(planDay?.day === 'tomorrow' ? 1 : 0);
-    const outages = planDay?.day === 'tomorrow' ? household.outagesTomorrow ?? household.outages : effectiveHousehold.outages;
-    downloadIcs(planToIcs(result, { outages }, date), `plan-${date}.ics`);
-    notify('success', 'Файл календаря збережено: відкрийте його, щоб додати нагадування');
-  };
-
   if (!household) {
     return <main className="page">{error ? <p className="error">{error}</p> : <p>Завантаження…</p>}</main>;
   }
@@ -461,7 +454,6 @@ export default function App() {
             onDismissReplan={() => setReplanNote(null)}
             hasQueue={hasQueue}
             onSelectDay={(day) => loadSchedule(day)}
-            onExportCalendar={exportCalendar}
             notifySettings={notifySettings}
             onNotifyChange={updateNotify}
           />

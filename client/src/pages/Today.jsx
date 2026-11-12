@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import ActionList from '../components/ActionList.jsx';
-import CalendarPanel from '../components/CalendarPanel.jsx';
 import TrafficLight from '../components/TrafficLight.jsx';
 import { StationCard, ScheduleCard, SolarCard } from '../components/StationWidget.jsx';
 
@@ -13,7 +12,7 @@ const nowSlotOf = () => {
 
 // Головний екран для звичайного користувача: що зі світлом зараз, скільки до відключення,
 // що з зарядом станції і що робити далі. Усе технічне — у розділі «Детально».
-export default function Today({ household, actual, actualNote, onReport, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, hasQueue, onSelectDay, onExportCalendar, notifySettings, onNotifyChange }) {
+export default function Today({ household, actual, actualNote, onReport, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, hasQueue, onSelectDay, notifySettings, onNotifyChange }) {
   const [now, setNow] = useState(nowSlotOf);
   useEffect(() => {
     const id = setInterval(() => setNow(nowSlotOf()), 30_000);
@@ -81,12 +80,6 @@ export default function Today({ household, actual, actualNote, onReport, result,
             <PrepAdvice household={household} result={result} now={0} />
             <GeneratorRules generators={result.generators ?? []} />
             <ActionList result={result} household={household} isToday={false} />
-            <div className="plan-actions no-print">
-              <CalendarPanel household={household} onDownload={onExportCalendar} />
-              <button type="button" className="secondary" onClick={() => window.print()}>
-                🖨️ Друкувати
-              </button>
-            </div>
           </>
         ) : (
           <>
@@ -100,12 +93,6 @@ export default function Today({ household, actual, actualNote, onReport, result,
               <summary>📋 Увесь план на сьогодні</summary>
               <ActionList result={result} household={household} isToday />
             </details>
-            <div className="plan-actions no-print">
-              <CalendarPanel household={household} onDownload={onExportCalendar} />
-              <button type="button" className="secondary" onClick={() => window.print()}>
-                🖨️ Друкувати
-              </button>
-            </div>
             {notifySettings && <NotifySettings settings={notifySettings} onChange={onNotifyChange} />}
           </>
         )}
