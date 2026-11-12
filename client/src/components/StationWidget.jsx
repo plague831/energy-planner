@@ -66,11 +66,27 @@ export function StationCard({ household, result, now, children }) {
   const elapsedH = (now - current.from) * SLOT_H;
   // Підсумки (віддано, заряджено, зміна заряду) — лише за ту частину відрізка, де план теж бачив
   // той самий стан світла: якщо графік змінився посеред дня, минулі слоти лишаються від старого плану.
+  // Так само, якщо план перебудовано з нового заряду (людина змінила станцію чи «Заряд зараз»):
+  // минулі слоти лишаються від розрахунку з іншим зарядом, і на стику заряд стрибає.
+  let floor = current.from;
+  const restart = trace.findIndex((t) => !t.past);
+  if (restart > current.from && restart <= slot) {
+    const t = trace[restart];
+    const oneSlot = (Math.max(dischargeW(t), t.chargeW ?? 0) * SLOT_H) / 0.92;
+    if (Math.abs(trace[restart - 1].energyWh - t.energyWh) > oneSlot + capacity * 0.03) floor = restart;
+  }
   let startSlot = slot;
-  while (startSlot > current.from && Boolean(trace[startSlot - 1].gridOn) === Boolean(trace[slot].gridOn)) startSlot--;
+  while (startSlot > floor && Boolean(trace[startSlot - 1].gridOn) === Boolean(trace[slot].gridOn)) startSlot--;
+  const since = startSlot > current.from ? ` з ${slotTime(startSlot)}` : '';
   const span = trace.slice(startSlot, slot + 1);
   const statsH = Math.max(SLOT_H, (now - startSlot) * SLOT_H);
-  const socStart = pct((trace[startSlot - 1] ?? trace[startSlot]).energyWh);
+  // Заряд на початку підсумків. Якщо вони починаються з перебудови плану, попередній слот — зі
+  // старого розрахунку, тож заряд «до» відновлюємо з першого нового слота.
+  const first = trace[startSlot];
+  const socStart =
+    startSlot === restart && floor === restart
+      ? pct(first.energyWh + ((dischargeW(first) / 0.92 - (first.chargeW ?? 0) * 0.92) * SLOT_H))
+      : pct((trace[startSlot - 1] ?? first).energyWh);
   const delta = Math.round(socNow) - Math.round(socStart);
 
   let badge;
@@ -83,7 +99,7 @@ export function StationCard({ household, result, now, children }) {
       icon: '⚡',
       label: 'Без світла',
       time: clockSpan(elapsedH),
-      line: `Віддано${avg > 0 ? ` · сер. ${fmt(avg)} Вт` : ''}`,
+      line: `Віддано${since}${avg > 0 ? ` · сер. ${fmt(avg)} Вт` : ''}`,
       value: `${fmt(given)} Вт·год`,
       footLabel: `До ${minPct}%`,
       foot: leftH === null ? '—' : clockSpan(leftH),
@@ -97,7 +113,7 @@ export function StationCard({ household, result, now, children }) {
       icon: '🔌',
       label: 'Світло є',
       time: clockSpan(elapsedH),
-      line: `Заряджено${avg > 0 ? ` · сер. ${fmt(avg)} Вт` : ''}`,
+      line: `Заряджено${since}${avg > 0 ? ` · сер. ${fmt(avg)} Вт` : ''}`,
       value: `${fmt(taken)} Вт·год`,
       footLabel: socNow >= 99 ? 'Заряджена' : 'До 100%',
       foot: socNow >= 99 ? '✓' : toFullH === null ? '—' : clockSpan(toFullH),
