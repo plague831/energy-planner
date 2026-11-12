@@ -13,7 +13,7 @@ const nowSlotOf = () => {
 
 // Головний екран для звичайного користувача: що зі світлом зараз, скільки до відключення,
 // що з зарядом станції і що робити далі. Усе технічне — у розділі «Детально».
-export default function Today({ household, actual, actualNote, onReport, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, onSetCharge, hasQueue, onSelectDay, onExportCalendar, notifySettings, onNotifyChange }) {
+export default function Today({ household, actual, actualNote, onReport, result, busy, planDay, scheduleNote, replanNote, onDismissReplan, hasQueue, onSelectDay, onExportCalendar, notifySettings, onNotifyChange }) {
   const [now, setNow] = useState(nowSlotOf);
   useEffect(() => {
     const id = setInterval(() => setNow(nowSlotOf()), 30_000);
@@ -63,9 +63,7 @@ export default function Today({ household, actual, actualNote, onReport, result,
 
       {!isTomorrow && (
         <>
-          <StationCard household={household} result={result} now={now}>
-            <ChargeCorrection onSetCharge={onSetCharge} />
-          </StationCard>
+          <StationCard household={household} result={result} now={now} />
           <ScheduleCard household={household} now={now} actual={actual} actualNote={actualNote} onReport={onReport} />
           <SolarCard household={household} result={result} now={now} />
         </>
@@ -212,38 +210,5 @@ function GeneratorRules({ generators }) {
         </li>
       ))}
     </ul>
-  );
-}
-
-// Якщо реальний заряд відрізняється від розрахунку, людина вводить його, і план перебудовується від нього.
-function ChargeCorrection({ onSetCharge }) {
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState('');
-  if (!open) {
-    return (
-      <button type="button" className="link-button charge-fix" onClick={() => setOpen(true)}>
-        Насправді заряд інший? Уточнити
-      </button>
-    );
-  }
-  const submit = (e) => {
-    e.preventDefault();
-    const pct = Number(value);
-    if (!(pct >= 0 && pct <= 100) || value === '') return;
-    onSetCharge(pct);
-    setOpen(false);
-    setValue('');
-  };
-  return (
-    <form className="charge-form" onSubmit={submit}>
-      <label className="field">
-        <span>Фактичний заряд станції зараз, %</span>
-        <input type="number" min={0} max={100} inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value)} autoFocus />
-      </label>
-      <button type="submit">Перебудувати план</button>
-      <button type="button" className="secondary" onClick={() => setOpen(false)}>
-        Скасувати
-      </button>
-    </form>
   );
 }

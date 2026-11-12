@@ -1789,23 +1789,6 @@ details.faq p {
   font-size: 14px;
 }
 
-.charge-fix {
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-.charge-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.charge-form .field {
-  flex: 1 1 200px;
-}
-
 .timeline .bar-generator {
   fill: var(--series-2);
 }
@@ -2823,10 +2806,6 @@ details.faq p {
   font-size: 22px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-}
-
-.station-card .charge-fix {
-  justify-self: start;
 }
 
 /* ---------- Графік «зараз і далі» ---------- */

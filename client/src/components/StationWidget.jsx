@@ -48,7 +48,7 @@ export function daySegments(outages) {
   return segments;
 }
 
-export function StationCard({ household, result, now, children }) {
+export function StationCard({ household, result, now }) {
   const battery = household.battery;
   const trace = result?.nominal?.trace;
   if (!battery?.capacityWh || !trace?.length) return null;
@@ -191,7 +191,6 @@ export function StationCard({ household, result, now, children }) {
         <span aria-hidden="true">ⓘ</span> Це розрахунок, а не показ самої станції: заряд і потужність пораховано за вашим списком приладів у «Мій дім» і
         планом. Реальні значення можуть відрізнятися, тож перед важливим рішенням звіряйтеся з екраном станції.
       </p>
-      {children}
     </section>
   );
 }
