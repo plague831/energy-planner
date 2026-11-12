@@ -2,12 +2,9 @@ import { useEffect, useState } from 'react';
 import ActionList from '../components/ActionList.jsx';
 import CalendarPanel from '../components/CalendarPanel.jsx';
 import TrafficLight from '../components/TrafficLight.jsx';
+import { StationCard, ScheduleCard } from '../components/StationWidget.jsx';
 
 const SLOT_MIN = 15;
-const toSlot = (t) => {
-  const [h, m] = t.split(':').map(Number);
-  return Math.round((h * 60 + m) / SLOT_MIN);
-};
 const slotTime = (s) => `${String(Math.floor((s * SLOT_MIN) / 60) % 24).padStart(2, '0')}:${String((s * SLOT_MIN) % 60).padStart(2, '0')}`;
 const nowSlotOf = () => {
   const d = new Date();
@@ -64,7 +61,14 @@ export default function Today({ household, actual, actualNote, onReport, result,
         </section>
       )}
 
-      {!isTomorrow && <PowerStatus household={household} result={result} now={now} onSetCharge={onSetCharge} actual={actual} actualNote={actualNote} onReport={onReport} />}
+      {!isTomorrow && (
+        <>
+          <StationCard household={household} result={result} now={now}>
+            <ChargeCorrection onSetCharge={onSetCharge} />
+          </StationCard>
+          <ScheduleCard household={household} now={now} actual={actual} actualNote={actualNote} onReport={onReport} />
+        </>
+      )}
 
       <section className="card">
         <h2>
@@ -210,74 +214,6 @@ function GeneratorRules({ generators }) {
   );
 }
 
-function PowerStatus({ household, result, now, onSetCharge, actual, actualNote, onReport }) {
-  const outages = (household.outages ?? []).map((o) => {
-    const from = toSlot(o.from);
-    let to = toSlot(o.to);
-    if (to <= from) to += 96;
-    return { from, to };
-  });
-  // Відключення через північ (22:00–02:00) зберігається як 88–104, тож після півночі порівнюємо ще й now + 96.
-  const inside = (o) => (now >= o.from && now < o.to ? now : now + 96 >= o.from && now + 96 < o.to ? now + 96 : null);
-  const current = outages.find((o) => inside(o) !== null);
-  const next = outages.filter((o) => o.from > now).sort((a, b) => a.from - b.from)[0];
-  const capacity = household.battery?.capacityWh;
-  const trace = result?.nominal?.trace;
-  const socNow = capacity && trace ? Math.round((trace[Math.min(95, Math.floor(now))].energyWh / capacity) * 100) : null;
-
-  return (
-    <section className={`card status ${current ? 'off' : 'on'}`}>
-      <div className="status-main">
-        <span className="status-icon" aria-hidden="true">
-          {current ? '🌑' : '💡'}
-        </span>
-        <div>
-          <div className="status-title">
-            {current
-              ? actual?.type === 'off'
-                ? `Зараз світла немає (ви повідомили о ${actual.time})`
-                : 'Зараз відключення за графіком'
-              : actual?.type === 'on'
-                ? `Зараз світло є (повернулось о ${actual.time})`
-                : 'Зараз світло є'}
-          </div>
-          <div className="status-sub">
-            {current
-              ? `Світло має повернутися о ${slotTime(current.to)} (через ${until(current.to - inside(current))})`
-              : next
-                ? `Наступне відключення о ${slotTime(next.from)}, через ${until(next.from - now)}`
-                : 'Сьогодні більше відключень за графіком немає'}
-          </div>
-        </div>
-      </div>
-      {socNow !== null && (
-        <div className="status-battery">
-          <div className="battery-bar" aria-hidden="true">
-            <div style={{ width: `${Math.max(0, Math.min(100, socNow))}%` }} />
-          </div>
-          <span>
-            Заряд станції за планом зараз ≈ <strong>{socNow}%</strong>
-          </span>
-        </div>
-      )}
-      {actualNote && <p className="actual-note">{actualNote}</p>}
-      <div className="report-buttons">
-        <span className="muted">Насправді інакше?</span>
-        {current ? (
-          <button type="button" className="secondary" onClick={() => onReport('on')}>
-            💡 Світло вже є
-          </button>
-        ) : (
-          <button type="button" className="secondary" onClick={() => onReport('off')}>
-            🌑 Світла немає
-          </button>
-        )}
-      </div>
-      {capacity && <ChargeCorrection onSetCharge={onSetCharge} />}
-    </section>
-  );
-}
-
 // Якщо реальний заряд відрізняється від розрахунку, людина вводить його, і план перебудовується від нього.
 function ChargeCorrection({ onSetCharge }) {
   const [open, setOpen] = useState(false);
@@ -309,12 +245,4 @@ function ChargeCorrection({ onSetCharge }) {
       </button>
     </form>
   );
-}
-
-function until(slots) {
-  const min = Math.max(0, Math.round(slots * SLOT_MIN));
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h === 0) return `${m} хв`;
-  return m ? `${h} год ${m} хв` : `${h} год`;
 }

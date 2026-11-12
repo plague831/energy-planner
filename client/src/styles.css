@@ -2573,3 +2573,354 @@ details.faq p {
   background: color-mix(in srgb, var(--warn) 12%, transparent);
   font-size: 14px;
 }
+
+/* ---------- Картка станції у стилі віджета ---------- */
+.station-card {
+  --sc-out: #f0913a;
+  --sc-in: #2fbf71;
+  display: grid;
+  gap: 14px;
+}
+
+.sc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sc-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.sc-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.sc-sub,
+.sc-updated {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sc-sub {
+  margin-top: 2px;
+}
+
+.sc-updated {
+  white-space: nowrap;
+}
+
+.sc-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.sc-picture {
+  width: 100%;
+  max-height: 170px;
+  align-self: center;
+}
+
+.sc-pic-body {
+  fill: color-mix(in srgb, var(--text) 14%, var(--surface));
+  stroke: var(--border);
+}
+
+.sc-pic-handle {
+  fill: color-mix(in srgb, var(--text) 22%, var(--surface));
+}
+
+.sc-pic-screen {
+  fill: #0b0f14;
+}
+
+.sc-pic-pct {
+  fill: #e6e9ee;
+  font: 700 18px system-ui, sans-serif;
+}
+
+.sc-picture.out .sc-pic-pct {
+  fill: var(--sc-out);
+}
+
+.sc-picture.in .sc-pic-pct {
+  fill: var(--sc-in);
+}
+
+.sc-pic-port,
+.sc-pic-vent {
+  fill: color-mix(in srgb, var(--text) 30%, var(--surface));
+}
+
+.sc-badge {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--sc-out) 45%, transparent);
+  background: color-mix(in srgb, var(--sc-out) 12%, transparent);
+}
+
+.sc-badge.on {
+  border-color: color-mix(in srgb, var(--sc-in) 45%, transparent);
+  background: color-mix(in srgb, var(--sc-in) 12%, transparent);
+}
+
+.sc-badge-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sc-badge-time {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-badge-line {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sc-badge-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--sc-out);
+}
+
+.sc-badge.on .sc-badge-value {
+  color: var(--sc-in);
+}
+
+.sc-badge-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sc-badge-foot strong {
+  color: var(--text);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-soc {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sc-soc-value {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-soc-delta {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sc-out);
+}
+
+.sc-soc-delta.up {
+  color: var(--sc-in);
+}
+
+.sc-bar {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  overflow: hidden;
+}
+
+.sc-bar div {
+  height: 100%;
+  border-radius: 6px;
+  background: var(--accent);
+  transition: width 0.4s;
+}
+
+.sc-bar.out div {
+  background: var(--sc-out);
+}
+
+.sc-bar.in div {
+  background: var(--sc-in);
+}
+
+.sc-bar i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--bad);
+  opacity: 0.7;
+}
+
+.sc-flows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.sc-flows > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+.sc-flows > div + div {
+  border-left: 1px solid var(--border);
+}
+
+.sc-flow-icon {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.sc-flow-icon.out {
+  color: var(--sc-out);
+}
+
+.sc-flow-icon.in {
+  color: var(--sc-in);
+}
+
+.sc-flow-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sc-flows strong {
+  margin-left: auto;
+  font-size: 22px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.station-card .charge-fix {
+  justify-self: start;
+}
+
+/* ---------- Графік «зараз і далі» ---------- */
+.schedule-card .sch-blocks {
+  position: relative;
+  display: grid;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.sch-block {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-items: center;
+  column-gap: 12px;
+  padding: 16px;
+  text-align: left;
+  color: #fff;
+  background: #4a5d2a;
+}
+
+.sch-block.off {
+  background: #8f2f2f;
+}
+
+.sch-block.possible {
+  background: repeating-linear-gradient(135deg, #4a5d2a 0 14px, #6b5a22 14px 28px);
+}
+
+.sch-icon {
+  grid-row: span 2;
+  font-size: 28px;
+}
+
+.sch-time {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sch-label {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.sch-block:not(.current) .sch-time {
+  font-size: 22px;
+}
+
+.sch-warn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 30px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.sch-note {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+@media (max-width: 480px) {
+  .sc-name {
+    font-size: 19px;
+  }
+
+  .sc-badge-time {
+    font-size: 26px;
+  }
+
+  .sc-soc-value {
+    font-size: 38px;
+  }
+
+  .sc-flows > div {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+
+  .sc-flows strong {
+    margin-left: 0;
+    width: 100%;
+    font-size: 20px;
+  }
+
+  .sch-time {
+    font-size: 22px;
+  }
+}
+
+.sch-time,
+.sch-label {
+  grid-column: 2;
+}
