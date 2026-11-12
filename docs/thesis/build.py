@@ -34,6 +34,7 @@ try:
 except ImportError:
     HYPHEN = None
 SHY = '\u00ad'   # м'який перенос: Word показує дефіс, лише коли справді переносить слово
+ZWSP = '\u200b'  # невидиме місце розриву рядка без дефіса
 
 BODY = '0'          # «0» у шаблоні: основний текст з відступом 1,25 см
 H1, H2 = '1', '2'
@@ -160,6 +161,8 @@ def table(doc, rows):
     t = doc.add_table(rows=len(rows), cols=len(rows[0]))
     t.style = doc.styles['Table Grid']
     t.autofit = False
+    # дуже довгу назву з бази (`calendar_subscriptions`) дозволяємо розривати після «_»
+    rows = [[re.sub(r'`([^`]{17,})`', lambda m: '`' + m.group(1).replace('_', '_' + ZWSP) + '`', cell) for cell in row] for row in rows]
     # Ширина колонки пропорційна середній довжині тексту в ній, але не менша за найдовше слово,
     # щоб слова не розривалися; разом 170 мм (ширина тексту на сторінці).
     minimum = min_widths(rows)
@@ -169,7 +172,7 @@ def table(doc, rows):
         minimum = min_widths(rows)
     if sum(minimum) > 170:
         minimum = [m * 170 / sum(minimum) for m in minimum]
-    weights = [max(sum(len(row[c].replace(SHY, '')) for row in rows) / len(rows), 4) for c in range(len(rows[0]))]
+    weights = [max(sum(len(re.sub(f'[{SHY}{ZWSP}]', '', row[c])) for row in rows) / len(rows), 4) for c in range(len(rows[0]))]
     widths = [170 * w / sum(weights) for w in weights]
     for _ in range(len(widths)):
         narrow = [c for c, w in enumerate(widths) if w < minimum[c] - 1e-6]
@@ -216,7 +219,7 @@ def min_widths(rows):
     for c in range(len(rows[0])):
         pieces = []
         for row in rows:
-            for word in re.sub(r'[`*{}^]', '', row[c]).split():
+            for word in re.split(f'[\\s{ZWSP}]+', re.sub(r'[`*{}^]', '', row[c])):
                 parts = word.split(SHY)
                 pieces += [p + '-' for p in parts[:-1]] + parts[-1:]
         out.append(word_mm(max(pieces, key=word_mm, default='')) + 2 * CELL_MARGIN_MM + 0.6)
