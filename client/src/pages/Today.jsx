@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import ActionList from '../components/ActionList.jsx';
 import CalendarPanel from '../components/CalendarPanel.jsx';
 import TrafficLight from '../components/TrafficLight.jsx';
-import { StationCard, ScheduleCard } from '../components/StationWidget.jsx';
+import { StationCard, ScheduleCard, SolarCard } from '../components/StationWidget.jsx';
 
 const SLOT_MIN = 15;
 const slotTime = (s) => `${String(Math.floor((s * SLOT_MIN) / 60) % 24).padStart(2, '0')}:${String((s * SLOT_MIN) % 60).padStart(2, '0')}`;
@@ -67,6 +67,7 @@ export default function Today({ household, actual, actualNote, onReport, result,
             <ChargeCorrection onSetCharge={onSetCharge} />
           </StationCard>
           <ScheduleCard household={household} now={now} actual={actual} actualNote={actualNote} onReport={onReport} />
+          <SolarCard household={household} result={result} now={now} />
         </>
       )}
 

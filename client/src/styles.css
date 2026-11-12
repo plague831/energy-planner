@@ -2924,3 +2924,63 @@ details.faq p {
 .sch-label {
   grid-column: 2;
 }
+
+/* ---------- Картка сонячних панелей ---------- */
+.solar-card {
+  --sc-sun: #e8a80c;
+}
+
+.sc-badge.day,
+.sc-badge.night {
+  border-color: color-mix(in srgb, var(--sc-sun) 45%, transparent);
+  background: color-mix(in srgb, var(--sc-sun) 12%, transparent);
+}
+
+.sc-badge.night {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.sc-badge.day .sc-badge-value,
+.sc-soc-delta.solar {
+  color: var(--sc-sun);
+}
+
+.sc-badge.night .sc-badge-value {
+  color: var(--text);
+}
+
+.sc-badge-note {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: -2px;
+}
+
+.sc-bar.solar div {
+  background: var(--sc-sun);
+}
+
+.sun-arc {
+  fill: none;
+  stroke: color-mix(in srgb, var(--sc-sun) 50%, transparent);
+  stroke-width: 2;
+  stroke-dasharray: 4 5;
+}
+
+.sun-horizon {
+  stroke: var(--border);
+  stroke-width: 2;
+}
+
+.sun-disc {
+  fill: var(--sc-sun);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--sc-sun) 70%, transparent));
+}
+
+.sun-moon {
+  fill: color-mix(in srgb, var(--text) 35%, var(--surface));
+}
+
+.sun-panel {
+  fill: color-mix(in srgb, var(--series-1) 60%, var(--surface));
+}

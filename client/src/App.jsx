@@ -184,7 +184,7 @@ export default function App() {
         if (s.kind !== 'solar' || !s.forecast) return s;
         const f = forecasts[`${s.lat},${s.lon}`]?.[localDate(offset)];
         // Прогнозу ще немає або він недоступний: звичайне для цієї пори року значення.
-        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset } : { ...s, sunHours: typicalSunHours() };
+        return f ? { ...s, sunHours: f.sunHours, sunrise: f.sunrise, sunset: f.sunset, cloudPct: f.cloudPct } : { ...s, sunHours: typicalSunHours(), typical: true };
       });
     const { outages, note } = applyActual(household.outages ?? [], actual);
     // План завжди на 48 год (сьогодні + завтра): якщо графік на завтра невідомий, береться сьогоднішній.

@@ -1,6 +1,8 @@
 // Головна картка «Сьогодні» у стилі віджетів зарядних станцій: заряд, скільки станція віддає чи
 // бере зараз, скільки триває відключення і на скільки ще вистачить; під нею — графік «зараз і далі».
 // Поки дані розрахункові (з плану), картка так і підписана; живі дані зі станції підставляться сюди ж.
+import { solarState } from '../solar.js';
+
 const SLOT_MIN = 15;
 const SLOT_H = SLOT_MIN / 60;
 
@@ -254,5 +256,115 @@ export function ScheduleCard({ household, now, actual, actualNote, onReport }) {
         )}
       </div>
     </section>
+  );
+}
+
+// Сонячні панелі в тому ж стилі: скільки дають зараз, скільки вже вироблено й чекати за день,
+// скільки до заходу сонця. Розрахунок за прогнозом погоди (або заданими вручну сонячними годинами).
+export function SolarCard({ household, result, now }) {
+  const st = solarState(household, result?.nominal?.trace, now);
+  if (!st) return null;
+  const { isDay, beforeSunrise, rise, set, nextRise, peakW, nowW, produced, total, tomorrowWh, toHome, toCharge, cloud, source, name } = st;
+  const minute = now * SLOT_MIN;
+  const clock = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+  const kwh = (wh) => (wh / 1000).toLocaleString('uk-UA', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+
+  const badge = isDay
+    ? {
+        kind: 'day',
+        label: 'День',
+        time: clockSpan((set - minute) / 60),
+        timeNote: 'до заходу сонця',
+        line: `Вироблено з ${clock(rise)}`,
+        value: `${kwh(produced)} кВт·год`,
+        footLabel: 'За весь день',
+        foot: `≈ ${kwh(total)} кВт·год`,
+      }
+    : {
+        kind: 'night',
+        label: 'Ніч',
+        time: beforeSunrise ? clock(rise) : nextRise !== null ? clock(nextRise) : '—',
+        timeNote: beforeSunrise ? 'схід сонця' : 'схід сонця завтра',
+        line: beforeSunrise ? 'Сьогодні чекати' : 'Сьогодні вироблено',
+        value: `${kwh(beforeSunrise ? total : produced)} кВт·год`,
+        footLabel: 'Завтра',
+        foot: tomorrowWh > 0 ? `≈ ${kwh(tomorrowWh)} кВт·год` : '—',
+      };
+
+  return (
+    <section className="card station-card solar-card">
+      <div className="sc-head">
+        <div>
+          <div className="sc-name">
+            <span className="sc-dot" title="Розрахунок, не вимірювання" aria-hidden="true" />
+            {name}
+          </div>
+          <div className="sc-sub">{[`${fmt(peakW)} Вт`, source, Number.isFinite(cloud) ? `хмарність ${cloud}%` : null].filter(Boolean).join(' · ')}</div>
+        </div>
+      </div>
+
+      <div className="sc-body">
+        <SunPicture progress={isDay ? (minute - rise) / (set - rise) : null} />
+        <div className={`sc-badge ${badge.kind}`}>
+          <div className="sc-badge-label">
+            <span aria-hidden="true">{isDay ? '☀️' : '🌙'}</span> {badge.label}
+          </div>
+          <div className="sc-badge-time">{badge.time}</div>
+          <div className="sc-badge-note">{badge.timeNote}</div>
+          <div className="sc-badge-line">{badge.line}</div>
+          <div className="sc-badge-value">{badge.value}</div>
+          <div className="sc-badge-foot">
+            <span>{badge.footLabel}</span>
+            <strong>{badge.foot}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div className="sc-soc">
+        <span className="sc-soc-value">≈ {fmt(nowW)} Вт</span>
+        <span className="sc-soc-delta solar">{Math.round((nowW / peakW) * 100)}% від {fmt(peakW)} Вт</span>
+      </div>
+      <div className="sc-bar solar" role="img" aria-label={`Зараз ≈ ${fmt(nowW)} Вт`}>
+        <div style={{ width: `${Math.min(100, (nowW / peakW) * 100)}%` }} />
+      </div>
+
+      {isDay && toHome !== null && (
+        <div className="sc-flows">
+          <div>
+            <span className="sc-flow-icon home" aria-hidden="true">
+              🏠
+            </span>
+            <span className="sc-flow-label">У дім</span>
+            <strong>{fmt(toHome)} Вт</strong>
+          </div>
+          <div>
+            <span className="sc-flow-icon in" aria-hidden="true">
+              🔋
+            </span>
+            <span className="sc-flow-label">На заряд станції</span>
+            <strong>{fmt(toCharge)} Вт</strong>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Дуга сонця над горизонтом: де сонце зараз між сходом і заходом.
+function SunPicture({ progress }) {
+  const angle = progress === null ? null : Math.PI * (1 - progress);
+  const cx = 100 + 80 * Math.cos(angle ?? 0);
+  const cy = 110 - 80 * Math.sin(angle ?? 0);
+  return (
+    <svg className="sc-picture" viewBox="0 0 200 130" role="img" aria-label={progress === null ? 'Ніч' : 'Положення сонця'}>
+      <path className="sun-arc" d="M 20 110 A 80 80 0 0 1 180 110" />
+      <line className="sun-horizon" x1="8" y1="110" x2="192" y2="110" />
+      {progress === null ? (
+        <circle className="sun-moon" cx="100" cy="50" r="14" />
+      ) : (
+        <circle className="sun-disc" cx={cx} cy={cy} r="13" />
+      )}
+      <rect className="sun-panel" x="62" y="114" width="76" height="10" rx="2" />
+    </svg>
   );
 }
