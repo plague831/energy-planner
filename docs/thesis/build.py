@@ -43,9 +43,10 @@ SHY = '\u00ad'   # м'який перенос: Word показує дефіс, �
 ZWSP = '\u200b'  # невидиме місце розриву рядка без дефіса
 
 BODY = '0'          # «0» у шаблоні: основний текст з відступом 1,25 см
-H1, H2 = '1', '2'
-TABLE = 'a3'        # Table Grid
-TABLE_PT = 14       # один розмір шрифту в усіх таблицях роботи (вимога керівника)
+H1, H2 = 'Heading 1', 'Heading 2'
+CAPTION_TABLE = 'Табл'  # стиль підпису таблиці в шаблоні КРМ 2026 (без відступу)
+CAPTION_FIGURE = 'Рис'  # стиль рисунка і його підпису (по центру, без відступу)
+TABLE_PT = 12       # один розмір шрифту в усіх таблицях роботи, 12 пт (вимога керівника, 23.11.2026)
 FIGURE_MM = 165
 CELL_MARGIN_MM = 1.0
 FIGURE_MAX_H_MM = 200
@@ -155,11 +156,20 @@ def heading(doc, text, style, page_break=False):
     return p
 
 
+def style_or_body(doc, name):
+    """Стиль шаблону, якщо він є (у шаблоні 2026 року є «Табл» і «Рис»), інакше основний текст."""
+    try:
+        return doc.styles[name]
+    except KeyError:
+        return BODY
+
+
 def caption_above(doc, text):
-    p = doc.add_paragraph(style=BODY)
+    # підпис таблиці над нею, по лівому краю без абзацного відступу (вимога керівника)
+    p = doc.add_paragraph(style=style_or_body(doc, CAPTION_TABLE))
     p.paragraph_format.first_line_indent = 0
     p.paragraph_format.keep_with_next = True
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     add_runs(p, text)
 
 
@@ -282,7 +292,7 @@ def formula(doc, text, number):
 
 
 def figure(doc, image, caption):
-    p = doc.add_paragraph(style=BODY)
+    p = doc.add_paragraph(style=style_or_body(doc, CAPTION_FIGURE))
     p.paragraph_format.first_line_indent = 0
     p.paragraph_format.keep_with_next = True
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -290,7 +300,7 @@ def figure(doc, image, caption):
     with Image.open(image) as im:
         w, h = im.size
     p.add_run().add_picture(str(image), width=Mm(min(FIGURE_MM, FIGURE_MAX_H_MM * w / h)))
-    c = doc.add_paragraph(style=BODY)
+    c = doc.add_paragraph(style=style_or_body(doc, CAPTION_FIGURE))
     c.paragraph_format.first_line_indent = 0
     c.paragraph_format.space_after = Pt(14)
     c.alignment = WD_ALIGN_PARAGRAPH.CENTER
