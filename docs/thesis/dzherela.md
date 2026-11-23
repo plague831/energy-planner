@@ -38,3 +38,10 @@
 - kleywegt: Kleywegt A. J., Shapiro A., Homem-de-Mello T. The sample average approximation method for stochastic discrete optimization. *SIAM Journal on Optimization*. 2002. Vol. 12, no. 2. P. 479–502. DOI: 10.1137/S1052623499363220.
 - rakshit: Rakshit P., Konar A., Das S. Noisy evolutionary optimization algorithms – A comprehensive survey. *Swarm and Evolutionary Computation*. 2017. Vol. 33. P. 18–45. DOI: 10.1016/j.swevo.2016.09.002.
 - eiben: Eiben A. E., Smith J. E. Introduction to Evolutionary Computing. 2nd ed. Berlin ; Heidelberg : Springer, 2015. 287 p. (Natural Computing Series). DOI: 10.1007/978-3-662-44874-8.
+- react: React : documentation / Meta Open Source. URL: https://react.dev/learn (дата звернення: 23.11.2026).
+- whatwg: HTML Living Standard. Web workers / WHATWG. URL: https://html.spec.whatwg.org/multipage/workers.html (дата звернення: 23.11.2026).
+- postgres: PostgreSQL 16 Documentation. Constraints / The PostgreSQL Global Development Group. URL: https://www.postgresql.org/docs/16/ddl-constraints.html (дата звернення: 23.11.2026).
+- nodetest: Node.js v22 Documentation. Test runner / OpenJS Foundation. URL: https://nodejs.org/docs/latest-v22.x/api/test.html (дата звернення: 23.11.2026).
+- huangfu: Huangfu Q., Hall J. A. J. Parallelizing the dual revised simplex method. *Mathematical Programming Computation*. 2018. Vol. 10, no. 1. P. 119–142. DOI: 10.1007/s12532-017-0130-5.
+- wilcoxon: Wilcoxon F. Individual comparisons by ranking methods. *Biometrics Bulletin*. 1945. Vol. 1, no. 6. P. 80–83. DOI: 10.2307/3001968.
+- fritz: Fritz C. O., Morris P. E., Richler J. J. Effect size estimates: current use, calculations, and interpretation. *Journal of Experimental Psychology: General*. 2012. Vol. 141, no. 1. P. 2–18. DOI: 10.1037/a0024338.

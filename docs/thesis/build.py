@@ -15,6 +15,7 @@
 і кожна таблиця мають посилання в тексті, і показує джерела, на які посилань немає.
 
 Рисунок: рядок ![Рисунок 2.1 – Назва](figures/ris-2-1.png), шлях відносно файлу розділу.
+Ширину в міліметрах можна задати після шляху: ![Рисунок 3.6 – Назва](figures/ris-3-6.png){105}.
 """
 import re
 import shutil
@@ -291,7 +292,7 @@ def formula(doc, text, number):
     p.add_run('\t' + number)
 
 
-def figure(doc, image, caption):
+def figure(doc, image, caption, width_mm=None):
     p = doc.add_paragraph(style=style_or_body(doc, CAPTION_FIGURE))
     p.paragraph_format.first_line_indent = 0
     p.paragraph_format.keep_with_next = True
@@ -299,7 +300,7 @@ def figure(doc, image, caption):
     # широкий рисунок займає 165 мм, високий обмежено 200 мм заввишки, щоб він уміщався з підписом
     with Image.open(image) as im:
         w, h = im.size
-    p.add_run().add_picture(str(image), width=Mm(min(FIGURE_MM, FIGURE_MAX_H_MM * w / h)))
+    p.add_run().add_picture(str(image), width=Mm(min(width_mm or FIGURE_MM, FIGURE_MAX_H_MM * w / h)))
     c = doc.add_paragraph(style=style_or_body(doc, CAPTION_FIGURE))
     c.paragraph_format.first_line_indent = 0
     c.paragraph_format.space_after = Pt(14)
@@ -328,14 +329,15 @@ def build(template, sources_path, out, chapters):
             if not line:
                 i += 1
                 continue
-            m = re.fullmatch(r'!\[(.+)\]\((.+)\)', line)
+            # ![підпис](файл) або ![підпис](файл){110} – ширина рисунка в міліметрах
+            m = re.fullmatch(r'!\[(.+)\]\(([^)]+)\)(?:\{(\d+)\})?', line)
             if line.startswith('# '):
                 heading(doc, line[2:], H1, page_break=not first)
                 first = False
             elif line.startswith('## '):
                 heading(doc, line[3:], H2)
             elif m:
-                figure(doc, base / m.group(2), m.group(1))
+                figure(doc, base / m.group(2), m.group(1), int(m.group(3)) if m.group(3) else None)
                 captions.append(m.group(1))
             elif line.startswith('Таблиця '):
                 caption_above(doc, line)

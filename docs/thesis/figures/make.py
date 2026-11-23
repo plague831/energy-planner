@@ -1,13 +1,19 @@
-"""Будує рисунки розділу 2 у docs/thesis/figures/*.png.
+"""Будує рисунки розділів 2 і 3 у docs/thesis/figures/*.png.
 
 Запуск з кореня репозиторію:
     python3 docs/thesis/figures/make.py
 
-Дані для графіків (сценарії, робота генератора) рахує ядро: node docs/thesis/figures/data.mjs.
+Дані для графіків (сценарії, робота генератора, штраф на тестових сценаріях) рахує ядро:
+node docs/thesis/figures/data.mjs. Аналіз чутливості береться зі звіту
+core/experiments/sensitivity-report.md, а знімки екрана сайту – з теки screens
+(їх робить screens.cjs).
 """
 import json
+import re
 import subprocess
 from pathlib import Path
+
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 import matplotlib
 matplotlib.use('Agg')
@@ -208,6 +214,97 @@ def generator_figure(data):
     save(fig, 'ris-2-2.png')
 
 
+# ---------- розділ 3 ----------
+
+def ecdf_figure(data):
+    """Рис. 3.4: емпірична функція розподілу штрафу на 500 тестових сценаріях."""
+    styles = [('naive', 'Без планування', ':'), ('greedy', 'Жадібний алгоритм і звичайний ГА', '--'), ('robust-ga', 'Стійкий ГА', '-')]
+    fig, ax = plt.subplots(figsize=(7.2, 3.8))
+    for key, label, ls in styles:
+        xs = sorted(data['penalties'][key])
+        n = len(xs)
+        ax.step(xs, [(k + 1) / n for k in range(n)], where='post', color='black', ls=ls, lw=1.5, label=label)
+    ax.axhline(0.9, color='#999999', lw=0.8)
+    ax.text(16, 0.86, '90 % сценаріїв', fontsize=10, color='#555555')
+    ax.set_xlim(left=0)
+    ax.set_ylim(0, 1.02)
+    ax.set_xlabel('Штраф плану на сценарії, бали')
+    ax.set_ylabel('Частка сценаріїв')
+    ax.grid(color='#dddddd', lw=0.5)
+    ax.legend(loc='lower right', fontsize=10, frameon=False)
+    save(fig, 'ris-3-4.png')
+
+
+def report_table(path, heading):
+    """Рядки першої таблиці після заголовка heading у звіті Markdown."""
+    text = (ROOT / path).read_text(encoding='utf8')
+    part = text[text.index(heading):]
+    rows = []
+    for line in part.splitlines()[1:]:
+        if line.startswith('|'):
+            cells = [c.strip() for c in line.strip('|').split('|')]
+            if not all(re.fullmatch(r'-+', c) for c in cells):
+                rows.append(cells)
+        elif rows:
+            break
+    return rows[1:]
+
+
+def sensitivity_figure():
+    """Рис. 3.5: штраф жадібного алгоритму і стійкого ГА залежно від ємності станції і від σ."""
+    report = 'core/experiments/sensitivity-report.md'
+    capacity = report_table(report, '## 1. Ємність зарядної станції')
+    sigma = report_table(report, '## 2. Величина невизначеності графіка')
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.3))
+    panels = [
+        (axes[0], [r[0].replace('немає', '0') for r in capacity], capacity, 'Ємність станції, Вт·год', 'а)'),
+        (axes[1], [r[0] for r in sigma], sigma, 'σ зсуву меж відключень, хв', 'б)'),
+    ]
+    for ax, labels, rows, xlabel, letter in panels:
+        x = range(len(rows))
+        ax.plot(x, [float(r[1]) for r in rows], color='black', ls='--', marker='s', ms=5, mfc='white', label='Жадібний алгоритм')
+        ax.plot(x, [float(r[2]) for r in rows], color='black', ls='-', marker='o', ms=5, label='Стійкий ГА')
+        ax.set_xticks(list(x))
+        ax.set_xticklabels(labels, fontsize=10)
+        ax.set_xlabel(f'{xlabel}\n{letter}')
+        ax.set_ylim(bottom=0)
+        ax.grid(color='#dddddd', lw=0.5)
+    axes[0].set_ylabel('Середній штраф, бали')
+    axes[0].legend(fontsize=10, frameon=False)
+    fig.tight_layout()
+    save(fig, 'ris-3-5.png')
+
+
+SCREENS = HERE / 'screens'
+LABEL_FONT = 'LiberationSerif-Regular.ttf'
+
+
+def framed(name):
+    """Знімок екрана з тонкою сірою рамкою, щоб він не зливався з білою сторінкою."""
+    im = Image.open(SCREENS / name).convert('RGB')
+    return ImageOps.expand(im, border=2, fill='#9a9a9a')
+
+
+def screen_figure(name, out):
+    framed(name).save(HERE / out)
+
+
+def screens_pair(left, right, out):
+    """Два знімки поруч, під кожним підпис «а)» і «б)», вирівняні за верхом."""
+    a, b = framed(left), framed(right)
+    gap, label_h = 60, 80
+    font = ImageFont.truetype(LABEL_FONT, 52)
+    w = a.width + gap + b.width
+    h = max(a.height, b.height) + label_h
+    canvas_im = Image.new('RGB', (w, h), 'white')
+    draw = ImageDraw.Draw(canvas_im)
+    for im, x0, letter in ((a, 0, 'а)'), (b, a.width + gap, 'б)')):
+        canvas_im.paste(im, (x0, 0))
+        tw = draw.textlength(letter, font=font)
+        draw.text((x0 + (im.width - tw) / 2, im.height + 14), letter, fill='black', font=font)
+    canvas_im.save(HERE / out)
+
+
 def main():
     data = json.loads(subprocess.run(['node', str(HERE / 'data.mjs')], cwd=ROOT, check=True, capture_output=True, text=True).stdout)
     method_scheme()
@@ -215,6 +312,13 @@ def main():
     generator_figure(data)
     ga_scheme()
     service_scheme()
+    screens_pair('today-a.png', 'today-b.png', 'ris-3-1.png')
+    screens_pair('home-sources.png', 'home-loads.png', 'ris-3-2.png')
+    screen_figure('diagram.png', 'ris-3-3.png')
+    ecdf_figure(data)
+    sensitivity_figure()
+    screen_figure('replan.png', 'ris-3-6.png')
+    screen_figure('compare.png', 'ris-3-7.png')
     print('Рисунки збережено в', HERE)
 
 
