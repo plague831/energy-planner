@@ -56,6 +56,10 @@ export function plan(household, options = {}) {
   const result = solve(model, algorithm, options);
   const elapsedMs = performance.now() - started;
 
+  // options.dropFailing (для сайту): прилад, який навіть за опублікованим графіком не відпрацює через
+  // відключення, у плані не лишається — людині не радять вмикати його даремно, а заряд станції
+  // не витрачається на запуск, що обірветься. Експерименти порівнюють методи без цієї обробки.
+  const dropped = options.dropFailing ? dropFailingRuns(model, result.starts, weights) : [];
   const nominal = simulate(model, result.starts, model.plannedGrid, weights, { trace: true });
   const testScenarios = generateScenarios(model, {
     count: options.testScenarios ?? 300,
@@ -68,13 +72,37 @@ export function plan(household, options = {}) {
     algorithm,
     algorithmName: ALGORITHMS[algorithm],
     elapsedMs,
-    schedule: describeSchedule(model, result.starts),
+    schedule: describeSchedule(model, result.starts).map((x) => (dropped.includes(x.id) ? { ...x, wontRun: true } : x)),
     generators: describeGenerators(model, result.starts),
     fromSlot: model.startSlot,
     nominal,
     robustness,
     convergence: result.history ?? null,
   };
+}
+
+// Знімає з плану (SKIP) запуски, що за опублікованим графіком обриваються відключенням. Повторює,
+// доки такі є: зняття одного приладу лишає станції більше заряду для інших. Повертає їхні id.
+function dropFailingRuns(model, starts, weights) {
+  const dropped = [];
+  for (let round = 0; round < model.appliances.length; round++) {
+    const { failedIds } = simulate(model, starts, model.plannedGrid, weights);
+    const failing = new Set(failedIds ?? []);
+    let changed = false;
+    model.appliances.forEach((a, i) => {
+      const s = starts[i];
+      // Уже ввімкнений раніше прилад (перепланування з «зараз») не знімаємо: його не скасуєш.
+      if (s === SKIP || s < (model.startSlot ?? 0) || !failing.has(a.id)) return;
+      let hitsOutage = false;
+      for (let t = s; t < s + a.duration && t < model.T; t++) if (!model.plannedGrid[t]) hitsOutage = true;
+      if (!hitsOutage) return;
+      starts[i] = SKIP;
+      dropped.push(a.id);
+      changed = true;
+    });
+    if (!changed) break;
+  }
+  return dropped;
 }
 
 export function describeSchedule(model, starts) {

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
+import { hourlyBalance } from '../balance.js';
 
 // Енергобаланс доби за планом: по годинах, звідки береться енергія (над нулем) і куди йде (під нулем),
 // і підсумок за добу. Як у застосунках інверторів, але за розрахунком плану, а не за вимірюваннями.
-const SLOT_H = 0.25;
 const kwh = (wh) => wh / 1000;
 const fmt = (x, d = 1) => (Number.isFinite(x) ? x.toLocaleString('uk-UA', { minimumFractionDigits: d, maximumFractionDigits: d }) : '—');
 
@@ -17,30 +17,6 @@ const SINKS = [
   { key: 'consumption', label: 'Споживання', color: '--flow-consumption' },
   { key: 'charge', label: 'Заряд станції', color: '--flow-charge' },
 ];
-
-// Перетворює покроковий слід імітації на енергію по годинах (Вт·год).
-export function hourlyBalance(trace) {
-  const hours = Array.from({ length: 24 }, (_, h) => ({ hour: h, solar: 0, grid: 0, generator: 0, discharge: 0, consumption: 0, charge: 0, shortage: 0, planned: false }));
-  for (const t of trace) {
-    const h = hours[Math.floor(t.slot / 4)];
-    if (!h) continue;
-    const served = t.servedW ?? 0;
-    const charge = t.chargeW ?? 0;
-    const solar = t.solarW ?? 0;
-    const generator = t.generatorW ?? 0;
-    const grid = t.gridOn ? Math.max(0, served + charge - solar) : 0;
-    const discharge = t.gridOn ? 0 : Math.max(0, served + charge - solar - generator);
-    h.solar += solar * SLOT_H;
-    h.grid += grid * SLOT_H;
-    h.generator += generator * SLOT_H;
-    h.discharge += discharge * SLOT_H;
-    h.consumption += served * SLOT_H;
-    h.charge += charge * SLOT_H;
-    h.shortage += Math.max(0, (t.demandW ?? 0) - served) * SLOT_H;
-    if (!t.past) h.planned = true;
-  }
-  return hours;
-}
 
 // Перелік назв через кому з «і» перед останньою: «мережа, сонце і генератор».
 const joinList = (items) => (items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} і ${items.at(-1)}`);

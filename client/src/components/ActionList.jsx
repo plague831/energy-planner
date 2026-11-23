@@ -58,6 +58,10 @@ export default function ActionList({ result, household, isToday }) {
       {skipped.length > 0 && (
         <p className="action-skipped">
           Сьогодні краще не вмикати: {skipped.map((s) => s.name).join(', ')}.
+          {skipped.some((s) => s.wontRun) &&
+            (household.battery
+              ? ' За графіком світла в потрібний час не буде, а від станції вони не відпрацювали б до кінця.'
+              : ' За графіком світла в потрібний час не буде, а резервного живлення немає.')}
         </p>
       )}
     </div>
@@ -78,10 +82,14 @@ function buildEvents(result, household) {
   const events = [];
 
   const genSlots = trace.map((t) => (t.generatorW ?? 0) > 0);
+  // Перший слот нового розрахунку: минулі слоти до нього могли лишитися від розрахунку з іншим зарядом.
+  const restart = trace.findIndex((t) => !t.past);
   for (const [from, to] of runs(trace.map((t) => !t.gridOn))) {
     const withGen = genSlots.slice(from, to).some(Boolean);
+    const ongoing = restart > from && restart < to;
+    const startText = ongoing ? `зараз ≈ ${pct(trace[restart].energyWh)}` : pct(energyAt(from));
     const detail = capacity
-      ? `Живлення від станції${withGen ? ' і генератора' : ''}: заряд ${pct(energyAt(from))} → ${pct(trace[to - 1].energyWh)}.`
+      ? `Живлення від станції${withGen ? ' і генератора' : ''}: заряд ${startText} → ${pct(trace[to - 1].energyWh)}.`
       : withGen
         ? 'Живлення від генератора.'
         : 'Резервного живлення немає, прилади не працюватимуть.';
@@ -127,15 +135,20 @@ function buildEvents(result, household) {
     const onBattery = Array.from({ length: s.endSlot - s.startSlot }, (_, k) => s.startSlot + k).some((t) => outageSlots.has(t));
     const slots = Array.from({ length: s.endSlot - s.startSlot }, (_, k) => s.startSlot + k);
     const genShare = slots.filter((t) => genSlots[t]).length / slots.length;
-    // Без станції й генератора прилад, що потрапляє на відключення, не відпрацює: чесно кажемо, що сьогодні не вийде.
-    if (onBattery && !capacity && genShare === 0) {
-      const app = (household.appliances ?? []).find((a) => a.id === s.id);
+    // Прилад потрапляє на відключення, а живити його нічим: без станції й генератора, або від станції
+    // його вмикати не можна. Він не відпрацює, тож замість «Увімкніть» чесно кажемо, що сьогодні не вийде.
+    const app = (household.appliances ?? []).find((a) => a.id === s.id);
+    const noBackup = !capacity && genShare === 0;
+    const notFromStation = capacity && genShare === 0 && app?.allowOnBattery === false && failed.has(s.id);
+    if (onBattery && (noBackup || notFromStation)) {
       events.push({
         slot: s.startSlot,
         time: s.start,
         kind: 'appliance warn',
         title: `Сьогодні не вийде: ${s.name}`,
-        detail: `Поки є світло, прилад уже не встигне відпрацювати${app?.latest ? ` до ${app.latest}` : ''}, а резервного живлення немає. Можна дозволити пізніший час у «Мій дім» або додати зарядну станцію.`,
+        detail: noBackup
+          ? `Поки є світло, прилад уже не встигне відпрацювати${app?.latest ? ` до ${app.latest}` : ''}, а резервного живлення немає. Можна дозволити пізніший час у «Мій дім» або додати зарядну станцію.`
+          : `Поки є світло, прилад уже не встигне відпрацювати${app?.latest ? ` до ${app.latest}` : ''}, а від станції його не вмикають. Можна дозволити пізніший час або вмикання від станції в «Мій дім».`,
       });
       continue;
     }

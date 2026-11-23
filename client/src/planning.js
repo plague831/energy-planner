@@ -46,7 +46,8 @@ const structure = (h) =>
 // лише на зміну графіка, а не на кнопки «світло зникло / повернулось».
 // План завжди будується на 48 год від поточного моменту (household.nextDay — дані на завтра),
 // тож заряд станції ввечері враховує завтрашній ранок. Повертається зріз на потрібну добу.
-export async function planDay(household, algorithm, { day = 'today', scheduleOutages } = {}) {
+// build — функція розрахунку плану (у браузері — фоновий потік, у тестах — ядро напряму).
+export async function planDay(household, algorithm, { day = 'today', scheduleOutages, build = buildPlan } = {}) {
   const scheduleKey = JSON.stringify(scheduleOutages ?? household.outages ?? []);
   const nowSlot = currentSlot();
   const prev = readLastPlan();
@@ -56,19 +57,31 @@ export async function planDay(household, algorithm, { day = 'today', scheduleOut
     if (!s.skipped && (s.day ?? 0) === 0 && s.startSlot < nowSlot && ids.has(s.id)) fixedStarts[s.id] = s.startSlot;
   }
   const sameInputs = prev && prev.entered === enteredState(household);
+  // Стан на ПОЧАТОК поточного слота — це кінець попереднього (у сліді імітації заряд записано
+  // після слота). Якщо брати кінець поточного, кожне перепланування в межах тих самих 15 хв
+  // віднімало б споживання цього слота ще раз, і заряд «сповзав» би з кожним оновленням сторінки.
+  // Якщо попередній план почато в цьому ж слоті, беремо його стартовий стан: слот перед ним —
+  // уже минуле, добудоване іншим розрахунком.
+  // План, збережений старішою версією сайту, не знає свого старту: для нього, як і раніше, кінець цього слота.
+  const before = sameInputs && prev.startSlot === undefined ? nowSlot : nowSlot - 1;
+  const sameStart = sameInputs && prev.startSlot === nowSlot;
+  const usable = (list) => sameInputs && before >= (prev.startSlot ?? 0) && Number.isFinite(list?.[before]);
+  const generators = (household.sources ?? []).filter((s) => s.kind === 'generator');
   const replan = {
     nowSlot,
     fixedStarts,
-    socPct: sameInputs && Number.isFinite(prev.socBySlot?.[nowSlot]) ? prev.socBySlot[nowSlot] : household.battery?.initialSocPct,
-    fuelPct: sameInputs && Number.isFinite(prev.fuelBySlot?.[nowSlot])
-      ? Object.fromEntries((household.sources ?? []).filter((s) => s.kind === 'generator').map((g) => [g.id, prev.fuelBySlot[nowSlot]]))
-      : undefined,
+    socPct: sameStart ? prev.startSoc ?? household.battery?.initialSocPct : usable(prev?.socBySlot) ? prev.socBySlot[before] : household.battery?.initialSocPct,
+    fuelPct: sameStart
+      ? prev.startFuel ?? undefined
+      : usable(prev?.fuelBySlot)
+        ? Object.fromEntries(generators.map((g) => [g.id, prev.fuelBySlot[before]]))
+        : undefined,
   };
   // Якщо попереднього плану на сьогодні немає, минулі години доби беруться з плану на весь горизонт,
   // щоб діаграма й енергобаланс показували всю добу, а не лише решту.
   const sameStructure = prev && prev.structure === structure(household);
   const needPast = nowSlot > 0 && (!sameStructure || !(prev?.trace?.length >= nowSlot));
-  const [fresh, fullDay] = await Promise.all([buildPlan(household, algorithm, replan), needPast ? buildPlan(household, algorithm).catch(() => null) : null]);
+  const [fresh, fullDay] = await Promise.all([build(household, algorithm, replan), needPast ? build(household, algorithm).catch(() => null) : null]);
   const full = mergeWithPast(fresh, fullDay ? { trace: fullDay.nominal.trace } : prev, household);
 
   // Що змінилось порівняно з попереднім планом, коли змінився графік відключень.
@@ -80,6 +93,9 @@ export async function planDay(household, algorithm, { day = 'today', scheduleOut
     entered: enteredState(household),
     structure: structure(household),
     outages: scheduleKey,
+    startSlot: nowSlot,
+    startSoc: replan.socPct ?? null,
+    startFuel: replan.fuelPct ?? null,
     schedule: full.schedule,
     socBySlot: capacity ? full.nominal.trace.map((t) => (t.energyWh / capacity) * 100) : [],
     fuelBySlot: full.nominal.trace.map((t) => t.fuelPct),
@@ -141,7 +157,7 @@ function maskOf(outages) {
   return mask;
 }
 
-function describeChanges(before, after, nowSlot) {
+export function describeChanges(before, after, nowSlot) {
   const prev = new Map((before ?? []).map((s) => [s.id, s]));
   const moved = [];
   for (const s of after) {

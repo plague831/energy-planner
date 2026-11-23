@@ -64,3 +64,29 @@ test('план описується у зрозумілому вигляді', (
   assert.match(boiler.start, /^\d{2}:\d{2}$/);
   assert.equal(timeToSlot(boiler.end) - timeToSlot(boiler.start), 4);
 });
+
+test('dropFailing: прилад, що за графіком обірветься відключенням, не лишається в плані', async () => {
+  const { plan } = await import('../src/planner.js');
+  // Без станції бойлер з вікном лише на час відключення не може відпрацювати ніяк.
+  const household = {
+    grid: { maxPowerW: 5000 },
+    battery: null,
+    outages: [{ from: '18:00', to: '22:00' }],
+    baseLoads: [{ id: 'fridge', name: 'Холодильник', powerW: 60, priority: 5 }],
+    appliances: [
+      { id: 'boiler', name: 'Бойлер', powerW: 2000, durationMin: 60, earliest: '18:00', latest: '22:00', priority: 4, allowOnBattery: false },
+      { id: 'washer', name: 'Пральна', powerW: 500, durationMin: 90, earliest: '07:00', latest: '23:00', priority: 3 },
+    ],
+  };
+  const plain = plan(household, { algorithm: 'naive', testScenarios: 20 });
+  const dropped = plan(household, { algorithm: 'naive', testScenarios: 20, dropFailing: true });
+  const boiler = (r) => r.schedule.find((s) => s.id === 'boiler');
+  assert.equal(boiler(plain).skipped, false, 'без обробки бойлер у плані лишається, хоч і не відпрацює');
+  assert.ok(plain.nominal.failedIds.includes('boiler'));
+  assert.equal(boiler(dropped).skipped, true);
+  assert.equal(boiler(dropped).wontRun, true);
+  // У сліді плану бойлер більше не вмикається під час відключення.
+  assert.equal(dropped.nominal.trace[timeToSlot('18:00')].demandW, 60);
+  // Прилад, який встигає зі світлом, не чіпаємо.
+  assert.equal(dropped.schedule.find((s) => s.id === 'washer').skipped, false);
+});
